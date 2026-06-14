@@ -75,8 +75,10 @@ def ip_scan():
         except ValueError as e:
             flash(f'网段格式错误: {str(e)}', 'danger')
 
-    history = IPScanService.get_recent_scans(10)
-    return render_template('ipscan.html', history=history)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    pagination = IPScanService.get_paginated_scans(page=page, per_page=per_page)
+    return render_template('ipscan.html', pagination=pagination)
 
 
 @ip_scan_bp.route('/results/<int:scan_id>')

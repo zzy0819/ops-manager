@@ -55,6 +55,14 @@ class IPScanService:
         return IPScanResult.query.order_by(IPScanResult.scan_time.desc()).limit(limit).all()
 
     @staticmethod
+    def get_paginated_scans(page=1, per_page=20):
+        """分页获取所有扫描记录"""
+        pagination = IPScanResult.query.order_by(IPScanResult.scan_time.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        return pagination
+
+    @staticmethod
     def create_scan_record(subnet, total_ips):
         """创建扫描记录并返回"""
         scan = IPScanResult(subnet=subnet, total_ips=total_ips)

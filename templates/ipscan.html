@@ -50,11 +50,12 @@
 </div>
 
 <div class="card mt-3">
-    <div class="card-header">
-        <i class="bi bi-clock-history me-2"></i>最近扫描记录
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2"></i>扫描记录</span>
+        <span class="text-muted" style="font-size: 12px;">共 {{ pagination.total }} 条记录</span>
     </div>
     <div class="card-body p-0">
-        {% if history %}
+        {% if pagination.items %}
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
@@ -69,7 +70,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for scan in history %}
+                    {% for scan in pagination.items %}
                     <tr>
                         <td>{{ scan.scan_time.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td><code>{{ scan.subnet }}</code></td>
@@ -118,6 +119,56 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+
+        <!-- 分页导航 -->
+        <div class="d-flex justify-content-between align-items-center p-3" style="border-top: 1px solid var(--border);">
+            <div class="text-muted" style="font-size: 12px;">
+                第 {{ pagination.page }} / {{ pagination.pages }} 页，每页 {{ pagination.per_page }} 条
+            </div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination mb-0">
+                    <!-- 上一页 -->
+                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                        <a class="page-link" href="{% if pagination.has_prev %}{{ url_for('ip_scan.ip_scan', page=pagination.prev_num, per_page=pagination.per_page) }}{% else %}#{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+
+                    <!-- 页码 -->
+                    {% for p in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+                        {% if p %}
+                            {% if p == pagination.page %}
+                            <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('ip_scan.ip_scan', page=p, per_page=pagination.per_page) }}">{{ p }}</a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- 下一页 -->
+                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                        <a class="page-link" href="{% if pagination.has_next %}{{ url_for('ip_scan.ip_scan', page=pagination.next_num, per_page=pagination.per_page) }}{% else %}#{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- 每页条数选择 -->
+            <div class="d-flex align-items-center gap-2" style="font-size: 12px;">
+                <span class="text-muted">每页</span>
+                <select class="form-select form-select-sm" style="width: 70px;" onchange="window.location.href='{{ url_for('ip_scan.ip_scan', page=1) }}&per_page=' + this.value;">
+                    <option value="10" {% if pagination.per_page == 10 %}selected{% endif %}>10</option>
+                    <option value="20" {% if pagination.per_page == 20 %}selected{% endif %}>20</option>
+                    <option value="50" {% if pagination.per_page == 50 %}selected{% endif %}>50</option>
+                </select>
+                <span class="text-muted">条</span>
+            </div>
         </div>
         {% else %}
         <div class="empty-state"><i class="bi bi-search"></i>暂无扫描记录</div>
