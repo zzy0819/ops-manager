@@ -340,6 +340,11 @@
         <i class="bi bi-hdd-stack"></i> 设备台账
     </a>
 
+    <a href="{{ url_for('diagnosis.diagnosis_page') }}"
+       class="sidebar-link {{ 'active' if request.endpoint == 'diagnosis.diagnosis_page' }}">
+        <i class="bi bi-activity"></i> 网络诊断
+    </a>
+
     <div class="sidebar-group">报表工具</div>
 
     <a href="{{ url_for('reports.reports') }}"

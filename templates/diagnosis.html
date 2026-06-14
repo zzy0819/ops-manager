@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<!-- 网络连通性诊断工具箱页面 -->
+{% extends "base.html" %}
+
+{% block title %}网络连通性诊断工具箱{% endblock %}
+{% block page_title %}网络连通性诊断工具箱{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- 标题区 -->
+    <div class="section-title mb-3">
+        <i class="bi bi-activity"></i> 网络连通性诊断工具箱
+    </div>
+
+    <!-- Tab 导航 -->
+    <ul class="nav nav-tabs mb-3" id="diagnosisTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="ping-tab" data-bs-toggle="tab" data-bs-target="#ping-panel"
+                    type="button" role="tab">
+                <i class="bi bi-arrow-repeat"></i> Ping
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="traceroute-tab" data-bs-toggle="tab" data-bs-target="#traceroute-panel"
+                    type="button" role="tab">
+                <i class="bi bi-signpost-split"></i> Traceroute
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="port-tab" data-bs-toggle="tab" data-bs-target="#port-panel"
+                    type="button" role="tab">
+                <i class="bi bi-ethernet"></i> 端口探测
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="dns-tab" data-bs-toggle="tab" data-bs-target="#dns-panel"
+                    type="button" role="tab">
+                <i class="bi bi-globe"></i> DNS 解析
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="full-tab" data-bs-toggle="tab" data-bs-target="#full-panel"
+                    type="button" role="tab">
+                <i class="bi bi-clipboard2-pulse"></i> 一键诊断
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab 内容 -->
+    <div class="tab-content" id="diagnosisTabContent">
+
+        <!-- ========== Ping ========== -->
+        <div class="tab-pane fade show active" id="ping-panel" role="tabpanel">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-arrow-repeat me-1"></i> ICMP Ping 诊断</div>
+                <div class="card-body">
+                    <form id="pingForm" class="row g-2 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label">目标 IP / 域名</label>
+                            <input type="text" class="form-control" id="pingHost" placeholder="例如 10.12.10.1 或 baidu.com" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">发包数量</label>
+                            <input type="number" class="form-control" id="pingCount" value="4" min="1" max="20">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100" id="pingBtn">
+                                <i class="bi bi-play-fill"></i> 开始 Ping
+                            </button>
+                        </div>
+                    </form>
+                    <div id="pingResult" class="mt-3" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== Traceroute ========== -->
+        <div class="tab-pane fade" id="traceroute-panel" role="tabpanel">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-signpost-split me-1"></i> Traceroute 路由追踪</div>
+                <div class="card-body">
+                    <form id="tracerouteForm" class="row g-2 align-items-end">
+                        <div class="col-md-6">
+                            <label class="form-label">目标 IP / 域名</label>
+                            <input type="text" class="form-control" id="tracerouteHost" placeholder="例如 10.12.10.1" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100" id="tracerouteBtn">
+                                <i class="bi bi-play-fill"></i> 开始追踪
+                            </button>
+                        </div>
+                    </form>
+                    <div id="tracerouteResult" class="mt-3" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 端口探测 ========== -->
+        <div class="tab-pane fade" id="port-panel" role="tabpanel">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-ethernet me-1"></i> TCP 端口探测</div>
+                <div class="card-body">
+                    <form id="portForm" class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">目标 IP / 域名</label>
+                            <input type="text" class="form-control" id="portHost" placeholder="例如 10.12.10.1" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">端口号（逗号分隔）</label>
+                            <input type="text" class="form-control" id="portPorts" placeholder="例如 22,80,443">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100" id="portBtn">
+                                <i class="bi bi-play-fill"></i> 开始探测
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2">
+                        <span class="form-label" style="font-size:12px;">常用端口快捷：</span>
+                        <button type="button" class="btn btn-outline-primary btn-sm me-1 port-quick" data-ports="22">SSH(22)</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm me-1 port-quick" data-ports="23">Telnet(23)</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm me-1 port-quick" data-ports="80">HTTP(80)</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm me-1 port-quick" data-ports="443">HTTPS(443)</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm me-1 port-quick" data-ports="3389">RDP(3389)</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm me-1 port-quick" data-ports="8080">HTTP-Alt(8080)</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm port-quick" data-ports="22,23,80,443,3389,8080">全部常用</button>
+                    </div>
+                    <div id="portResult" class="mt-3" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== DNS 解析 ========== -->
+        <div class="tab-pane fade" id="dns-panel" role="tabpanel">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-globe me-1"></i> DNS 解析</div>
+                <div class="card-body">
+                    <form id="dnsForm" class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">域名</label>
+                            <input type="text" class="form-control" id="dnsDomain" placeholder="例如 baidu.com" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">DNS 服务器（可选）</label>
+                            <input type="text" class="form-control" id="dnsServer" placeholder="例如 8.8.8.8">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100" id="dnsBtn">
+                                <i class="bi bi-play-fill"></i> 开始解析
+                            </button>
+                        </div>
+                    </form>
+                    <div id="dnsResult" class="mt-3" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 一键诊断 ========== -->
+        <div class="tab-pane fade" id="full-panel" role="tabpanel">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-clipboard2-pulse me-1"></i> 一键诊断报告</div>
+                <div class="card-body">
+                    <form id="fullForm" class="row g-2 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label">目标 IP / 域名</label>
+                            <input type="text" class="form-control" id="fullTarget" placeholder="例如 10.12.10.1" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100" id="fullBtn">
+                                <i class="bi bi-lightning-fill"></i> 一键诊断
+                            </button>
+                        </div>
+                    </form>
+                    <div id="fullResult" class="mt-3" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /tab-content -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    /* ===== 工具函数 ===== */
+
+    /** 显示 spinner 加载状态 */
+    function setLoading(btnId, resultId) {
+        var $btn = $('#' + btnId);
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>执行中...');
+        var $result = $('#' + resultId);
+        $result.show().html(
+            '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div>' +
+            '<div class="mt-2 text-muted" style="font-size:13px;">正在执行诊断，请稍候...</div></div>'
+        );
+    }
+
+    /** 恢复按钮状态 */
+    function resetBtn(btnId, label, icon) {
+        $('#' + btnId).prop('disabled', false).html('<i class="bi bi-' + icon + '"></i> ' + label);
+    }
+
+    /** 格式化延迟 */
+    function fmtLatency(v) {
+        return (v !== null && v !== undefined) ? v + ' ms' : '-';
+    }
+
+    /* ===== Ping ===== */
+    $('#pingForm').on('submit', function(e){
+        e.preventDefault();
+        var host = $('#pingHost').val().trim();
+        var count = parseInt($('#pingCount').val()) || 4;
+        if(!host) return;
+
+        setLoading('pingBtn', 'pingResult');
+        $.ajax({
+            url: '/diagnosis/ping',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({host: host, count: count}),
+            success: function(res){
+                resetBtn('pingBtn', '开始 Ping', 'play-fill');
+                if(!res.success){
+                    $('#pingResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + res.error + '</div>');
+                    return;
+                }
+                var html = '<div class="card"><div class="card-header">Ping 结果 — ' + res.host + '</div><div class="card-body">';
+                html += '<div class="row mb-3">';
+                html += '<div class="col-md-3"><span class="text-muted">发包数：</span><strong>' + res.packets_sent + '</strong></div>';
+                html += '<div class="col-md-3"><span class="text-muted">接收数：</span><strong>' + res.packets_received + '</strong></div>';
+                html += '<div class="col-md-3"><span class="text-muted">丢包率：</span><strong>' + res.loss_rate + '%</strong></div>';
+                html += '<div class="col-md-3"><span class="text-muted">平均延迟：</span><strong>' + fmtLatency(res.avg_latency) + '</strong></div>';
+                html += '</div>';
+                html += '<div class="row mb-3">';
+                html += '<div class="col-md-3"><span class="text-muted">最小延迟：</span><strong>' + fmtLatency(res.min_latency) + '</strong></div>';
+                html += '<div class="col-md-3"><span class="text-muted">最大延迟：</span><strong>' + fmtLatency(res.max_latency) + '</strong></div>';
+                html += '</div>';
+                html += '<table class="table table-sm"><thead><tr><th>序号</th><th>延迟</th><th>状态</th></tr></thead><tbody>';
+                res.details.forEach(function(d){
+                    var statusBadge = d.status === 'ok'
+                        ? '<span class="badge bg-success">正常</span>'
+                        : '<span class="badge bg-danger">超时</span>';
+                    html += '<tr><td>' + d.seq + '</td><td>' + fmtLatency(d.time) + '</td><td>' + statusBadge + '</td></tr>';
+                });
+                html += '</tbody></table></div></div>';
+                $('#pingResult').html(html);
+            },
+            error: function(xhr){
+                resetBtn('pingBtn', '开始 Ping', 'play-fill');
+                var msg = '请求失败';
+                try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e){}
+                $('#pingResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + msg + '</div>');
+            }
+        });
+    });
+
+    /* ===== Traceroute ===== */
+    $('#tracerouteForm').on('submit', function(e){
+        e.preventDefault();
+        var host = $('#tracerouteHost').val().trim();
+        if(!host) return;
+
+        setLoading('tracerouteBtn', 'tracerouteResult');
+        $.ajax({
+            url: '/diagnosis/traceroute',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({host: host}),
+            success: function(res){
+                resetBtn('tracerouteBtn', '开始追踪', 'play-fill');
+                if(!res.success){
+                    $('#tracerouteResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + res.error + '</div>');
+                    return;
+                }
+                var html = '<div class="card"><div class="card-header">路由追踪结果 — ' + res.host + '（共 ' + res.total_hops + ' 跳）</div><div class="card-body">';
+                html += '<table class="table table-sm"><thead><tr><th>跳数</th><th>IP</th><th>延迟1</th><th>延迟2</th><th>延迟3</th><th>状态</th></tr></thead><tbody>';
+                res.hops.forEach(function(h){
+                    var statusBadge = h.timeout
+                        ? '<span class="badge bg-warning text-dark">超时</span>'
+                        : '<span class="badge bg-success">正常</span>';
+                    var t1 = h.times[0] !== null ? h.times[0] + ' ms' : '*';
+                    var t2 = h.times[1] !== null ? h.times[1] + ' ms' : '*';
+                    var t3 = h.times[2] !== null ? h.times[2] + ' ms' : '*';
+                    html += '<tr><td>' + h.hop + '</td><td><code>' + h.ip + '</code></td><td>' + t1 + '</td><td>' + t2 + '</td><td>' + t3 + '</td><td>' + statusBadge + '</td></tr>';
+                });
+                html += '</tbody></table></div></div>';
+                $('#tracerouteResult').html(html);
+            },
+            error: function(xhr){
+                resetBtn('tracerouteBtn', '开始追踪', 'play-fill');
+                var msg = '请求失败';
+                try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e){}
+                $('#tracerouteResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + msg + '</div>');
+            }
+        });
+    });
+
+    /* ===== 端口探测 ===== */
+
+    // 常用端口快捷选择
+    $('.port-quick').on('click', function(){
+        var ports = $(this).data('ports');
+        $('#portPorts').val(ports);
+    });
+
+    $('#portForm').on('submit', function(e){
+        e.preventDefault();
+        var host = $('#portHost').val().trim();
+        var ports = $('#portPorts').val().trim();
+        if(!host || !ports) return;
+
+        setLoading('portBtn', 'portResult');
+        $.ajax({
+            url: '/diagnosis/port_scan',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({host: host, ports: ports}),
+            success: function(res){
+                resetBtn('portBtn', '开始探测', 'play-fill');
+                if(!res.success){
+                    $('#portResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + res.error + '</div>');
+                    return;
+                }
+                var html = '<div class="card"><div class="card-header">端口探测结果 — ' + res.host + '</div><div class="card-body">';
+                html += '<div class="row mb-3">';
+                html += '<div class="col-md-4"><span class="text-muted">探测总数：</span><strong>' + res.total + '</strong></div>';
+                html += '<div class="col-md-4"><span class="text-muted">开放：</span><strong class="text-success">' + res.open_count + '</strong></div>';
+                html += '<div class="col-md-4"><span class="text-muted">关闭：</span><strong class="text-danger">' + res.closed_count + '</strong></div>';
+                html += '</div>';
+                html += '<table class="table table-sm"><thead><tr><th>端口</th><th>状态</th><th>响应时间</th><th>说明</th></tr></thead><tbody>';
+                res.ports.forEach(function(p){
+                    var statusBadge = p.status === 'open'
+                        ? '<span class="badge bg-success">开放</span>'
+                        : (p.status === 'closed'
+                            ? '<span class="badge bg-danger">关闭</span>'
+                            : '<span class="badge bg-warning text-dark">异常</span>');
+                    var respTime = p.response_time !== null ? p.response_time + ' ms' : '-';
+                    var errInfo = p.error || '-';
+                    html += '<tr><td><strong>' + p.port + '</strong></td><td>' + statusBadge + '</td><td>' + respTime + '</td><td class="text-muted">' + errInfo + '</td></tr>';
+                });
+                html += '</tbody></table></div></div>';
+                $('#portResult').html(html);
+            },
+            error: function(xhr){
+                resetBtn('portBtn', '开始探测', 'play-fill');
+                var msg = '请求失败';
+                try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e){}
+                $('#portResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + msg + '</div>');
+            }
+        });
+    });
+
+    /* ===== DNS 解析 ===== */
+    $('#dnsForm').on('submit', function(e){
+        e.preventDefault();
+        var domain = $('#dnsDomain').val().trim();
+        var dnsServer = $('#dnsServer').val().trim();
+        if(!domain) return;
+
+        setLoading('dnsBtn', 'dnsResult');
+        var payload = {domain: domain};
+        if(dnsServer) payload.dns_server = dnsServer;
+
+        $.ajax({
+            url: '/diagnosis/dns',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res){
+                resetBtn('dnsBtn', '开始解析', 'play-fill');
+                if(!res.success){
+                    $('#dnsResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + res.error + '</div>');
+                    return;
+                }
+                var html = '<div class="card"><div class="card-header">DNS 解析结果 — ' + res.domain + '</div><div class="card-body">';
+                html += '<div class="row mb-3">';
+                html += '<div class="col-md-4"><span class="text-muted">DNS 服务器：</span><strong>' + res.dns_server + '</strong></div>';
+                html += '<div class="col-md-4"><span class="text-muted">解析耗时：</span><strong>' + res.elapsed + ' ms</strong></div>';
+                html += '<div class="col-md-4"><span class="text-muted">解析IP数：</span><strong>' + res.ips.length + '</strong></div>';
+                html += '</div>';
+                if(res.ips.length > 0){
+                    html += '<table class="table table-sm"><thead><tr><th>序号</th><th>IP 地址</th></tr></thead><tbody>';
+                    res.ips.forEach(function(ip, idx){
+                        html += '<tr><td>' + (idx+1) + '</td><td><code>' + ip + '</code></td></tr>';
+                    });
+                    html += '</tbody></table>';
+                } else {
+                    html += '<div class="text-muted text-center py-3">未解析到 IP 地址</div>';
+                }
+                html += '</div></div>';
+                $('#dnsResult').html(html);
+            },
+            error: function(xhr){
+                resetBtn('dnsBtn', '开始解析', 'play-fill');
+                var msg = '请求失败';
+                try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e){}
+                $('#dnsResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + msg + '</div>');
+            }
+        });
+    });
+
+    /* ===== 一键诊断 ===== */
+    $('#fullForm').on('submit', function(e){
+        e.preventDefault();
+        var target = $('#fullTarget').val().trim();
+        if(!target) return;
+
+        setLoading('fullBtn', 'fullResult');
+        $.ajax({
+            url: '/diagnosis/full',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({target: target}),
+            success: function(res){
+                resetBtn('fullBtn', '一键诊断', 'lightning-fill');
+                if(!res.success){
+                    $('#fullResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + res.error + '</div>');
+                    return;
+                }
+                var html = '';
+
+                // 摘要卡片
+                var summary = res.summary;
+                var cardClass, cardIcon, cardBg;
+                if(summary.status === 'reachable'){
+                    cardClass = 'border-success'; cardIcon = 'bi-check-circle-fill'; cardBg = 'background:#e8ffea;';
+                } else if(summary.status === 'partial'){
+                    cardClass = 'border-warning'; cardIcon = 'bi-exclamation-triangle-fill'; cardBg = 'background:#fff7e8;';
+                } else {
+                    cardClass = 'border-danger'; cardIcon = 'bi-x-circle-fill'; cardBg = 'background:#ffece8;';
+                }
+                html += '<div class="card ' + cardClass + ' mb-3">';
+                html += '<div class="card-body" style="' + cardBg + '">';
+                html += '<div class="d-flex align-items-center gap-3">';
+                html += '<i class="bi ' + cardIcon + '" style="font-size:32px;"></i>';
+                html += '<div>';
+                html += '<h5 class="mb-1">' + summary.description + '</h5>';
+                html += '<span class="text-muted" style="font-size:12px;">目标：' + res.target + ' | 时间：' + res.timestamp + '</span>';
+                html += '</div></div></div></div>';
+
+                // Ping 摘要
+                var ping = res.ping;
+                if(ping && ping.success){
+                    html += '<div class="card mb-2"><div class="card-header d-flex justify-content-between align-items-center">';
+                    html += '<span><i class="bi bi-arrow-repeat me-1"></i> Ping 结果</span>';
+                    html += '<span class="badge ' + (ping.loss_rate < 100 ? 'bg-success' : 'bg-danger') + '">' + (ping.loss_rate < 100 ? '可达' : '不可达') + '</span>';
+                    html += '</div><div class="card-body">';
+                    html += '<div class="row" style="font-size:13px;">';
+                    html += '<div class="col-md-3"><span class="text-muted">发包/接收：</span>' + ping.packets_sent + '/' + ping.packets_received + '</div>';
+                    html += '<div class="col-md-3"><span class="text-muted">丢包率：</span>' + ping.loss_rate + '%</div>';
+                    html += '<div class="col-md-3"><span class="text-muted">平均延迟：</span>' + fmtLatency(ping.avg_latency) + '</div>';
+                    html += '<div class="col-md-3"><span class="text-muted">最小/最大：</span>' + fmtLatency(ping.min_latency) + ' / ' + fmtLatency(ping.max_latency) + '</div>';
+                    html += '</div></div></div>';
+                }
+
+                // Traceroute 摘要
+                var trace = res.traceroute;
+                if(trace && trace.success){
+                    html += '<div class="card mb-2"><div class="card-header d-flex justify-content-between align-items-center">';
+                    html += '<span><i class="bi bi-signpost-split me-1"></i> 路由追踪</span>';
+                    var timeoutHops = trace.hops.filter(function(h){ return h.timeout; }).length;
+                    html += '<span class="badge ' + (timeoutHops === 0 ? 'bg-success' : 'bg-warning text-dark') + '">' + trace.total_hops + ' 跳 / ' + timeoutHops + ' 超时</span>';
+                    html += '</div><div class="card-body" style="max-height:200px;overflow-y:auto;">';
+                    html += '<table class="table table-sm mb-0"><thead><tr><th>跳</th><th>IP</th><th>延迟1</th><th>延迟2</th><th>延迟3</th></tr></thead><tbody>';
+                    trace.hops.forEach(function(h){
+                        var cls = h.timeout ? 'table-warning' : '';
+                        var t1 = h.times[0] !== null ? h.times[0] + 'ms' : '*';
+                        var t2 = h.times[1] !== null ? h.times[1] + 'ms' : '*';
+                        var t3 = h.times[2] !== null ? h.times[2] + 'ms' : '*';
+                        html += '<tr class="' + cls + '"><td>' + h.hop + '</td><td><code>' + h.ip + '</code></td><td>' + t1 + '</td><td>' + t2 + '</td><td>' + t3 + '</td></tr>';
+                    });
+                    html += '</tbody></table></div></div>';
+                }
+
+                // 端口探测摘要
+                var ps = res.port_scan;
+                if(ps && ps.success){
+                    html += '<div class="card mb-2"><div class="card-header d-flex justify-content-between align-items-center">';
+                    html += '<span><i class="bi bi-ethernet me-1"></i> 端口探测</span>';
+                    html += '<span class="badge bg-info">' + ps.open_count + ' 开放 / ' + ps.closed_count + ' 关闭</span>';
+                    html += '</div><div class="card-body">';
+                    html += '<table class="table table-sm mb-0"><thead><tr><th>端口</th><th>状态</th><th>响应时间</th></tr></thead><tbody>';
+                    ps.ports.forEach(function(p){
+                        var statusBadge = p.status === 'open'
+                            ? '<span class="badge bg-success">开放</span>'
+                            : '<span class="badge bg-danger">关闭</span>';
+                        var respTime = p.response_time !== null ? p.response_time + ' ms' : '-';
+                        html += '<tr><td>' + p.port + '</td><td>' + statusBadge + '</td><td>' + respTime + '</td></tr>';
+                    });
+                    html += '</tbody></table></div></div>';
+                }
+
+                // DNS 解析摘要
+                var dns = res.dns;
+                if(dns && dns.success){
+                    html += '<div class="card mb-2"><div class="card-header d-flex justify-content-between align-items-center">';
+                    html += '<span><i class="bi bi-globe me-1"></i> DNS 解析</span>';
+                    html += '<span class="badge bg-success">成功</span>';
+                    html += '</div><div class="card-body">';
+                    html += '<div class="row" style="font-size:13px;">';
+                    html += '<div class="col-md-4"><span class="text-muted">DNS 服务器：</span>' + dns.dns_server + '</div>';
+                    html += '<div class="col-md-4"><span class="text-muted">解析耗时：</span>' + dns.elapsed + ' ms</div>';
+                    html += '<div class="col-md-4"><span class="text-muted">IP 列表：</span>' + dns.ips.join(', ') + '</div>';
+                    html += '</div></div></div>';
+                } else if(dns && !dns.success) {
+                    html += '<div class="card mb-2"><div class="card-header d-flex justify-content-between align-items-center">';
+                    html += '<span><i class="bi bi-globe me-1"></i> DNS 解析</span>';
+                    html += '<span class="badge bg-danger">失败</span>';
+                    html += '</div><div class="card-body"><span class="text-danger">' + (dns.error || '解析失败') + '</span></div></div>';
+                }
+
+                $('#fullResult').html(html);
+            },
+            error: function(xhr){
+                resetBtn('fullBtn', '一键诊断', 'lightning-fill');
+                var msg = '请求失败';
+                try { msg = JSON.parse(xhr.responseText).error || msg; } catch(e){}
+                $('#fullResult').html('<div class="alert alert-danger"><i class="bi bi-x-circle me-1"></i>' + msg + '</div>');
+            }
+        });
+    });
+
+})();
+</script>
+{% endblock %}
