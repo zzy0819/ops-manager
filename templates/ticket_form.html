@@ -3,19 +3,14 @@
 {% block page_title %}{{ '编辑工单' if ticket else '新建工单' }}{% endblock %}
 {% block content %}
 
-<h2 class="mb-3">
-    <i class="bi bi-ticket-detailed text-warning"></i>
-    {{ '编辑工单' if ticket else '新建工单' }}
-</h2>
-
 <div class="card">
     <div class="card-body">
         <form method="POST">
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label">创建时间 <span class="text-danger">*</span></label>
-                    <input type="datetime-local" name="create_time" class="form-control" required
-                           value="{{ ticket.create_time.strftime('%Y-%m-%dT%H:%M') if ticket else '' }}">
+                    <label class="form-label">工单号 <span class="text-danger">*</span></label>
+                    <input type="text" name="ticket_number" class="form-control" placeholder="TK-20240101-001" required
+                           value="{{ ticket.ticket_number if ticket else '' }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">申请人 <span class="text-danger">*</span></label>
@@ -23,13 +18,13 @@
                            value="{{ ticket.requester if ticket else '' }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">所在部门 <span class="text-danger">*</span></label>
-                    <input type="text" name="department" class="form-control" placeholder="技术部" required
+                    <label class="form-label">部门</label>
+                    <input type="text" name="department" class="form-control" placeholder="IT部"
                            value="{{ ticket.department if ticket else '' }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">联系方式 <span class="text-danger">*</span></label>
-                    <input type="text" name="contact" class="form-control" placeholder="电话 / 邮箱 / 工号" required
+                    <label class="form-label">联系方式</label>
+                    <input type="text" name="contact" class="form-control" placeholder="13800138000"
                            value="{{ ticket.contact if ticket else '' }}">
                 </div>
                 <div class="col-md-4">
@@ -41,17 +36,12 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">优先级 <span class="text-danger">*</span></label>
-                    <select name="priority" class="form-select" required>
+                    <label class="form-label">优先级</label>
+                    <select name="priority" class="form-select">
                         {% for p in priority_list %}
                         <option value="{{ p }}" {% if ticket and ticket.priority == p %}selected{% endif %}>{{ p }}</option>
                         {% endfor %}
                     </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">处理人</label>
-                    <input type="text" name="assignee" class="form-control" placeholder="分配的处理人"
-                           value="{{ ticket.assignee if ticket else '' }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">状态</label>
@@ -62,21 +52,17 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">关闭时间</label>
-                    <input type="datetime-local" name="close_time" class="form-control"
-                           value="{{ ticket.close_time.strftime('%Y-%m-%dT%H:%M') if ticket and ticket.close_time else '' }}">
+                    <label class="form-label">处理人</label>
+                    <input type="text" name="assignee" class="form-control" placeholder="李四"
+                           value="{{ ticket.assignee if ticket else '' }}">
                 </div>
                 <div class="col-md-12">
-                    <label class="form-label">问题描述 <span class="text-danger">*</span></label>
-                    <textarea name="problem_description" class="form-control" rows="4" placeholder="详细描述遇到的问题..." required>{{ ticket.problem_description if ticket else '' }}</textarea>
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label">解决方案</label>
-                    <textarea name="solution" class="form-control" rows="4" placeholder="处理方案和结果...">{{ ticket.solution if ticket else '' }}</textarea>
+                    <label class="form-label">问题描述</label>
+                    <textarea name="description" class="form-control" rows="4" placeholder="请详细描述问题...">{{ ticket.description if ticket else '' }}</textarea>
                 </div>
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-lg"></i> {{ '更新' if ticket else '创建工单' }}
+                        <i class="bi bi-check-lg"></i> {{ '更新' if ticket else '保存' }}
                     </button>
                     <a href="{{ url_for('tickets.ticket_list') }}" class="btn btn-secondary">
                         <i class="bi bi-x-lg"></i> 取消

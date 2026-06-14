@@ -1,51 +1,52 @@
 {% extends "base.html" %}
 {% block title %}安全事件中心{% endblock %}
+{% block page_title %}安全事件中心{% endblock %}
 
 {% block extra_css %}
 <style>
     .cve-table { font-size: 0.85rem; }
-    .cve-table th { background: #f8f9fc; font-weight: 600; white-space: nowrap; }
+    .cve-table th { background: #f7f8fa; font-weight: 600; white-space: nowrap; }
     .cve-table td { vertical-align: middle; }
-    .sev-critical { background: #dc3545; color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
-    .sev-high { background: #fd7e14; color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
-    .sev-info { background: #6c757d; color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+    .sev-critical { background: #f53f3f; color: #fff; padding: 2px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+    .sev-high     { background: #ff7d00; color: #fff; padding: 2px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+    .sev-info     { background: #86909c; color: #fff; padding: 2px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
 
     .news-card {
-        border: 1px solid #eef0f4;
-        border-radius: 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
         padding: 16px;
         margin-bottom: 12px;
         transition: all 0.2s;
         background: #fff;
     }
-    .news-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); transform: translateY(-2px); }
+    .news-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
     .news-card .news-source {
         display: inline-block;
         padding: 2px 10px;
-        border-radius: 10px;
+        border-radius: 4px;
         font-size: 0.72rem;
         font-weight: 600;
     }
-    .source-international { background: #e7f0ff; color: #3b7ddd; }
-    .source-domestic { background: #fef4e8; color: #d68c2e; }
+    .source-international { background: #e6f4ff; color: #1677ff; }
+    .source-domestic { background: #fff7e8; color: #ff7d00; }
     .news-title {
         font-size: 0.92rem;
         font-weight: 600;
-        color: #333;
+        color: var(--text-primary);
         margin: 8px 0 4px;
         line-height: 1.4;
     }
-    .news-title a { color: #333; text-decoration: none; }
-    .news-title a:hover { color: #667eea; }
-    .news-summary { font-size: 0.8rem; color: #777; line-height: 1.5; }
-    .news-date { font-size: 0.72rem; color: #aaa; }
+    .news-title a { color: var(--text-primary); text-decoration: none; }
+    .news-title a:hover { color: var(--primary); }
+    .news-summary { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
+    .news-date { font-size: 0.72rem; color: var(--text-muted); }
 
     .filter-bar {
         background: #fff;
-        border-radius: 10px;
+        border-radius: 8px;
         padding: 14px 18px;
         margin-bottom: 16px;
-        border: 1px solid #eef0f4;
+        border: 1px solid var(--border);
         display: flex;
         align-items: center;
         gap: 12px;
@@ -54,174 +55,167 @@
     .filter-bar .btn { font-size: 0.82rem; }
 
     .tab-nav { margin-bottom: 16px; }
-    .tab-nav .nav-link { color: #666; border: none; padding: 8px 20px; font-weight: 500; }
-    .tab-nav .nav-link.active { color: #667eea; border-bottom: 2px solid #667eea; background: none; }
+    .tab-nav .nav-link { color: var(--text-secondary); border: none; padding: 8px 20px; font-weight: 500; }
+    .tab-nav .nav-link.active { color: var(--primary); border-bottom: 2px solid var(--primary); background: none; }
 
     .stats-row .stat-card { padding: 14px 18px; }
     .stats-row .stat-card .stat-value { font-size: 1.6rem; font-weight: 700; }
-    .stats-row .stat-card .stat-label { font-size: 0.78rem; color: #999; }
+    .stats-row .stat-card .stat-label { font-size: 0.78rem; color: var(--text-muted); }
 
-    .update-time { font-size: 0.78rem; color: #aaa; text-align: right; margin-bottom: 12px; }
+    .update-time { font-size: 0.78rem; color: var(--text-muted); text-align: right; margin-bottom: 12px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="main-header">
-    <div>
-        <h2 class="page-title"><i class="bi bi-globe2 me-2"></i>安全事件中心</h2>
+<div class="update-time">
+    <i class="bi bi-clock"></i> 数据更新于 {{ now }}
+</div>
+
+<!-- 统计卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="bi bi-bug" style="color:#f53f3f"></i>
+            <div class="stat-value" style="color:#f53f3f">{{ cves|selectattr('severity', 'equalto', 'CRITICAL')|list|length }}</div>
+            <div class="stat-label">Critical 漏洞</div>
+        </div>
     </div>
-    <div class="update-time">
-        <i class="bi bi-clock"></i> 数据更新于 {{ now }}
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="bi bi-bug-fill" style="color:#ff7d00"></i>
+            <div class="stat-value" style="color:#ff7d00">{{ cves|selectattr('severity', 'equalto', 'HIGH')|list|length }}</div>
+            <div class="stat-label">High 漏洞</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="bi bi-building" style="color:#1677ff"></i>
+            <div class="stat-value" style="color:#1677ff">{{ news|selectattr('region', 'equalto', '国内')|list|length }}</div>
+            <div class="stat-label">国内安全资讯</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="bi bi-globe" style="color:#00b42a"></i>
+            <div class="stat-value" style="color:#00b42a">{{ news|selectattr('region', 'equalto', '国际')|list|length }}</div>
+            <div class="stat-label">国际安全资讯</div>
+        </div>
     </div>
 </div>
 
-<div class="main-body">
-
-    <!-- 统计卡片 -->
-    <div class="row stats-row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card bg-white">
-                <div class="stat-value text-danger">{{ cves|selectattr('severity', 'equalto', 'CRITICAL')|list|length }}</div>
-                <div class="stat-label">Critical 漏洞</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card bg-white">
-                <div class="stat-value text-warning">{{ cves|selectattr('severity', 'equalto', 'HIGH')|list|length }}</div>
-                <div class="stat-label">High 漏洞</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card bg-white">
-                <div class="stat-value text-primary">{{ news|selectattr('region', 'equalto', '国内')|list|length }}</div>
-                <div class="stat-label">国内安全资讯</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card bg-white">
-                <div class="stat-value text-info">{{ news|selectattr('region', 'equalto', '国际')|list|length }}</div>
-                <div class="stat-label">国际安全资讯</div>
-            </div>
+<!-- CVE 漏洞列表 -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-bug me-2"></i>最新漏洞 (NVD / CVE)
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover cve-table mb-0">
+                <thead>
+                    <tr>
+                        <th>CVE 编号</th>
+                        <th>描述</th>
+                        <th style="width:90px">严重程度</th>
+                        <th style="width:80px">CVSS</th>
+                        <th style="width:100px">发布日期</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cve in cves %}
+                    <tr>
+                        <td class="fw-bold text-nowrap">
+                            <a href="https://nvd.nist.gov/vuln/detail/{{ cve.id }}" target="_blank" style="color:var(--text-primary);text-decoration:none;">
+                                {{ cve.id }}
+                            </a>
+                        </td>
+                        <td>{{ cve.description[:150] }}{% if cve.description|length > 150 %}...{% endif %}</td>
+                        <td>
+                            {% if cve.severity == 'CRITICAL' %}
+                            <span class="sev-critical">CRITICAL</span>
+                            {% elif cve.severity == 'HIGH' %}
+                            <span class="sev-high">HIGH</span>
+                            {% else %}
+                            <span class="sev-info">{{ cve.severity }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if cve.cvss_score %}
+                            <span class="fw-bold {% if cve.cvss_score >= 9 %}text-danger{% elif cve.cvss_score >= 7 %}text-warning{% else %}text-muted{% endif %}">
+                                {{ cve.cvss_score }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ cve.pub_date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 
-    <!-- CVE 漏洞列表 -->
-    <div class="card">
-        <div class="card-header">
-            <i class="bi bi-bug me-2"></i>最新漏洞 (NVD / CVE)
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover cve-table mb-0">
-                    <thead>
-                        <tr>
-                            <th>CVE 编号</th>
-                            <th>描述</th>
-                            <th style="width:90px">严重程度</th>
-                            <th style="width:80px">CVSS</th>
-                            <th style="width:100px">发布日期</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for cve in cves %}
-                        <tr>
-                            <td class="fw-bold text-nowrap">
-                                <a href="https://nvd.nist.gov/vuln/detail/{{ cve.id }}" target="_blank" style="color:#333;text-decoration:none;">
-                                    {{ cve.id }}
-                                </a>
-                            </td>
-                            <td>{{ cve.description[:150] }}{% if cve.description|length > 150 %}...{% endif %}</td>
-                            <td>
-                                {% if cve.severity == 'CRITICAL' %}
-                                <span class="sev-critical">CRITICAL</span>
-                                {% elif cve.severity == 'HIGH' %}
-                                <span class="sev-high">HIGH</span>
-                                {% else %}
-                                <span class="sev-info">{{ cve.severity }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if cve.cvss_score %}
-                                <span class="fw-bold {% if cve.cvss_score >= 9 %}text-danger{% elif cve.cvss_score >= 7 %}text-warning{% else %}text-muted{% endif %}">
-                                    {{ cve.cvss_score }}
-                                </span>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-muted">{{ cve.pub_date }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<!-- 安全资讯 -->
+<div class="card mt-3">
+    <div class="card-header">
+        <i class="bi bi-newspaper me-2"></i>安全资讯
     </div>
+    <div class="card-body">
+        <ul class="nav nav-tabs tab-nav" id="newsTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-news" type="button">
+                    <i class="bi bi-grid"></i> 全部 ({{ news|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="domestic-tab" data-bs-toggle="tab" data-bs-target="#domestic-news" type="button">
+                    <i class="bi bi-building"></i> 国内
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="international-tab" data-bs-toggle="tab" data-bs-target="#international-news" type="button">
+                    <i class="bi bi-globe"></i> 国际
+                </button>
+            </li>
+        </ul>
 
-    <!-- 安全资讯 -->
-    <div class="card">
-        <div class="card-header">
-            <i class="bi bi-newspaper me-2"></i>安全资讯
-        </div>
-        <div class="card-body">
-            <!-- Tab 导航 -->
-            <ul class="nav nav-tabs tab-nav" id="newsTab" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-news" type="button">
-                        <i class="bi bi-grid"></i> 全部 ({{ news|length }})
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="domestic-tab" data-bs-toggle="tab" data-bs-target="#domestic-news" type="button">
-                        <i class="bi bi-building"></i> 国内
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="international-tab" data-bs-toggle="tab" data-bs-target="#international-news" type="button">
-                        <i class="bi bi-globe"></i> 国际
-                    </button>
-                </li>
-            </ul>
-
-            <div class="tab-content" id="newsTabContent">
-                {% for tab, tab_id, filter_region in [('全部', 'all-news', None), ('国内', 'domestic-news', '国内'), ('国际', 'international-news', '国际')] %}
-                <div class="tab-pane fade {{ 'show active' if tab == '全部' }}" id="{{ tab_id }}" role="tabpanel">
-                    {% set filtered = news if filter_region is none else news|selectattr('region', 'equalto', filter_region)|list %}
-                    {% if filtered %}
-                        <div class="row">
-                        {% for item in filtered %}
-                        <div class="col-md-6">
-                            <div class="news-card">
-                                <span class="news-source {{ 'source-domestic' if item.region == '国内' else 'source-international' }}">
-                                    {{ item.source }}
-                                </span>
-                                <div class="news-title">
-                                    <a href="{{ item.link }}" target="_blank">{{ item.title }}</a>
-                                </div>
-                                <div class="news-summary">{{ item.summary[:150] }}{% if item.summary|length > 150 %}...{% endif %}</div>
-                                <div class="news-date mt-2"><i class="bi bi-clock"></i> {{ item.pub_date }}</div>
+        <div class="tab-content" id="newsTabContent">
+            {% for tab, tab_id, filter_region in [('全部', 'all-news', None), ('国内', 'domestic-news', '国内'), ('国际', 'international-news', '国际')] %}
+            <div class="tab-pane fade {{ 'show active' if tab == '全部' }}" id="{{ tab_id }}" role="tabpanel">
+                {% set filtered = news if filter_region is none else news|selectattr('region', 'equalto', filter_region)|list %}
+                {% if filtered %}
+                    <div class="row">
+                    {% for item in filtered %}
+                    <div class="col-md-6">
+                        <div class="news-card">
+                            <span class="news-source {{ 'source-domestic' if item.region == '国内' else 'source-international' }}">
+                                {{ item.source }}
+                            </span>
+                            <div class="news-title">
+                                <a href="{{ item.link }}" target="_blank">{{ item.title }}</a>
                             </div>
+                            <div class="news-summary">{{ item.summary[:150] }}{% if item.summary|length > 150 %}...{% endif %}</div>
+                            <div class="news-date mt-2"><i class="bi bi-clock"></i> {{ item.pub_date }}</div>
                         </div>
-                        {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="text-center text-muted py-4">
-                            <i class="bi bi-inbox" style="font-size:2rem;"></i>
-                            <p class="mt-2">暂无数据，请稍后刷新重试</p>
-                        </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
+                    </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox" style="font-size:2rem;"></i>
+                        <p class="mt-2">暂无数据，请稍后刷新重试</p>
+                    </div>
+                {% endif %}
             </div>
+            {% endfor %}
         </div>
     </div>
-
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // 如果 Bootstrap tabs 未自动工作，手动激活
     document.querySelectorAll('#newsTab button').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
             var tab = new bootstrap.Tab(this);

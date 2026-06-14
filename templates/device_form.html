@@ -3,19 +3,13 @@
 {% block page_title %}{{ '编辑设备' if device else '新增设备' }}{% endblock %}
 {% block content %}
 
-<h2 class="mb-3">
-    <i class="bi bi-hdd-stack text-info"></i>
-    {{ '编辑设备' if device else '新增设备' }}
-</h2>
-
 <div class="card">
     <div class="card-body">
         <form method="POST">
-            <h5 class="mb-3 text-muted">基本信息</h5>
-            <div class="row g-3 mb-3">
+            <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">设备名称 <span class="text-danger">*</span></label>
-                    <input type="text" name="device_name" class="form-control" placeholder="核心交换机-01" required
+                    <input type="text" name="device_name" class="form-control" placeholder="深信服 AF-1000" required
                            value="{{ device.device_name if device else '' }}">
                 </div>
                 <div class="col-md-4">
@@ -28,133 +22,69 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">品牌</label>
-                    <input type="text" name="brand" class="form-control" placeholder="如 Cisco / H3C / 华为"
+                    <input type="text" name="brand" class="form-control" placeholder="深信服"
                            value="{{ device.brand if device else '' }}">
                 </div>
-            </div>
-
-            <h5 class="mb-3 text-muted">设备标识</h5>
-            <div class="row g-3 mb-3">
                 <div class="col-md-4">
                     <label class="form-label">型号</label>
-                    <input type="text" name="model" class="form-control" placeholder="如 WS-C2960X-48TS-L"
+                    <input type="text" name="model" class="form-control" placeholder="AF-1000"
                            value="{{ device.model if device else '' }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">序列号</label>
-                    <input type="text" name="serial_number" class="form-control" placeholder="唯一序列号"
+                    <input type="text" name="serial_number" class="form-control" placeholder="SN123456789"
                            value="{{ device.serial_number if device else '' }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">固件版本</label>
-                    <input type="text" name="firmware_version" class="form-control" placeholder="如 v15.2(7)E4"
-                           value="{{ device.firmware_version if device else '' }}">
-                </div>
-            </div>
-
-            <h5 class="mb-3 text-muted">网络信息</h5>
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label">IP 地址</label>
-                    <input type="text" name="ip_address" class="form-control" placeholder="如 10.0.0.1"
+                    <label class="form-label">IP地址</label>
+                    <input type="text" name="ip_address" class="form-control" placeholder="10.0.0.1"
                            value="{{ device.ip_address if device else '' }}">
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">MAC 地址</label>
-                    <input type="text" name="mac_address" class="form-control" placeholder="如 AA:BB:CC:DD:EE:FF"
+                <div class="col-md-4">
+                    <label class="form-label">MAC地址</label>
+                    <input type="text" name="mac_address" class="form-control" placeholder="00:11:22:33:44:55"
                            value="{{ device.mac_address if device else '' }}">
                 </div>
-            </div>
-
-            <h5 class="mb-3 text-muted">远程管理凭据（SSH/Telnet）</h5>
-            <div class="row g-3 mb-3">
-                <div class="col-md-3">
-                    <label class="form-label">管理协议</label>
-                    <select name="mgmt_protocol" class="form-select">
-                        <option value="ssh" {% if device and device.mgmt_protocol == 'ssh' %}selected{% endif %}>SSH</option>
-                        <option value="telnet" {% if device and device.mgmt_protocol == 'telnet' %}selected{% endif %}>Telnet</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">端口</label>
-                    <input type="number" name="mgmt_port" class="form-control" placeholder="22"
-                           value="{{ device.mgmt_port if device else 22 }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">用户名</label>
-                    <input type="text" name="mgmt_username" class="form-control" placeholder="admin"
-                           value="{{ device.mgmt_username if device else '' }}">
-                </div>
                 <div class="col-md-4">
-                    <label class="form-label">密码</label>
-                    <input type="password" name="mgmt_password" class="form-control" placeholder="{% if device %}留空则不修改{% endif %}"
-                           value="">
-                </div>
-            </div>
-
-            <h5 class="mb-3 text-muted">位置与管理</h5>
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <label class="form-label">物理位置</label>
-                    <input type="text" name="location" class="form-control" placeholder="如 3楼数据中心A区"
+                    <label class="form-label">位置</label>
+                    <input type="text" name="location" class="form-control" placeholder="机房A"
                            value="{{ device.location if device else '' }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">机柜/槽位</label>
-                    <input type="text" name="rack_position" class="form-control" placeholder="如 A03-12"
+                    <label class="form-label">机柜位置</label>
+                    <input type="text" name="rack_position" class="form-control" placeholder="A-01"
                            value="{{ device.rack_position if device else '' }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">设备状态</label>
+                    <label class="form-label">负责人</label>
+                    <input type="text" name="responsible_person" class="form-control" placeholder="张三"
+                           value="{{ device.responsible_person if device else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">部门</label>
+                    <input type="text" name="department" class="form-control" placeholder="IT部"
+                           value="{{ device.department if device else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">状态</label>
                     <select name="status" class="form-select">
                         {% for s in status_list %}
                         <option value="{{ s }}" {% if device and device.status == s %}selected{% endif %}>{{ s }}</option>
                         {% endfor %}
                     </select>
                 </div>
-            </div>
-
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label">负责人</label>
-                    <input type="text" name="responsible_person" class="form-control" placeholder="如 张三"
-                           value="{{ device.responsible_person if device else '' }}">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">所属部门</label>
-                    <input type="text" name="department" class="form-control" placeholder="如 网络运维部"
-                           value="{{ device.department if device else '' }}">
-                </div>
-            </div>
-
-            <h5 class="mb-3 text-muted">生命周期</h5>
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <label class="form-label">采购日期</label>
-                    <input type="date" name="purchase_date" class="form-control"
-                           value="{{ device.purchase_date.strftime('%Y-%m-%d') if device and device.purchase_date else '' }}">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">保修截止日期</label>
-                    <input type="date" name="warranty_expire" class="form-control"
-                           value="{{ device.warranty_expire.strftime('%Y-%m-%d') if device and device.warranty_expire else '' }}">
-                </div>
-            </div>
-
-            <div class="row g-3 mb-3">
                 <div class="col-md-12">
                     <label class="form-label">备注</label>
-                    <textarea name="remarks" class="form-control" rows="3" placeholder="其他补充信息...">{{ device.remarks if device else '' }}</textarea>
+                    <textarea name="notes" class="form-control" rows="3" placeholder="其他备注信息...">{{ device.notes if device else '' }}</textarea>
                 </div>
-            </div>
-
-            <div class="col-12">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-lg"></i> {{ '更新' if device else '保存' }}
-                </button>
-                <a href="{{ url_for('devices.device_list') }}" class="btn btn-secondary">
-                    <i class="bi bi-x-lg"></i> 取消
-                </a>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> {{ '更新' if device else '保存' }}
+                    </button>
+                    <a href="{{ url_for('devices.device_list') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-lg"></i> 取消
+                    </a>
+                </div>
             </div>
         </form>
     </div>

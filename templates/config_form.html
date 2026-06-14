@@ -3,11 +3,6 @@
 {% block page_title %}{{ '编辑配置变更' if config else '新增配置变更' }}{% endblock %}
 {% block content %}
 
-<h2 class="mb-3">
-    <i class="bi bi-gear text-primary"></i>
-    {{ '编辑配置变更' if config else '新增配置变更' }}
-</h2>
-
 <div class="card">
     <div class="card-body">
         <form method="POST">
@@ -19,7 +14,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">设备名称 <span class="text-danger">*</span></label>
-                    <input type="text" name="device_name" class="form-control" placeholder="核心交换机-01" required
+                    <input type="text" name="device_name" class="form-control" placeholder="深信服 AF" required
                            value="{{ config.device_name if config else '' }}">
                 </div>
                 <div class="col-md-4">
@@ -50,17 +45,15 @@
                 </div>
                 <div class="col-md-12">
                     <label class="form-label">变更内容 <span class="text-danger">*</span></label>
-                    <textarea name="change_content" class="form-control" rows="4" placeholder="具体的配置变更内容..." required>{{ config.change_content if config else '' }}</textarea>
+                    <textarea name="change_content" class="form-control" rows="4" placeholder="具体变更内容..." required>{{ config.change_content if config else '' }}</textarea>
                 </div>
                 <div class="col-md-12">
-                    <label class="form-label">变更原因</label>
-                    <textarea name="change_reason" class="form-control" rows="3" placeholder="变更的原因和背景...">{{ config.change_reason if config else '' }}</textarea>
-                </div>
-                <div class="col-md-6">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="is_rollback" id="is_rollback"
                                {% if config and config.is_rollback %}checked{% endif %}>
-                        <label class="form-check-label" for="is_rollback">是否回滚</label>
+                        <label class="form-check-label" for="is_rollback">
+                            是否回滚
+                        </label>
                     </div>
                 </div>
                 <div class="col-12">

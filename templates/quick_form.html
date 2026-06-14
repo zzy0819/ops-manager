@@ -1,87 +1,55 @@
 {% extends "base.html" %}
-{% block title %}{% if link %}编辑系统{% else %}添加系统{% endif %} - 运维管理系统{% endblock %}
-{% block page_title %}{% if link %}编辑系统{% else %}添加系统{% endif %}{% endblock %}
+{% block title %}添加系统{% endblock %}
+{% block page_title %}添加系统{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-lg-8">
         <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-plus-circle me-2"></i>
-                    {% if link %}编辑系统{% else %}添加系统{% endif %}
-                </h5>
+            <div class="card-header">
+                <i class="bi bi-plus-circle me-2"></i>{{ '编辑系统' if link else '添加系统' }}
             </div>
             <div class="card-body">
                 <form method="post">
-                    <div class="mb-3">
-                        <label for="name" class="form-label">系统名称 <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="name" name="name" 
-                               value="{{ link.name if link else '' }}" required>
-                        <div class="form-text">例如：东贝防火墙、OA系统、CRM</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="url" class="form-label">登录地址 <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="url" name="url" 
-                               value="{{ link.url if link else '' }}" required>
-                        <div class="form-text">支持 http://、https:// 或内部路径如 /attacks</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">描述说明</label>
-                        <textarea class="form-control" id="description" name="description" rows="2">{{ link.description if link else '' }}</textarea>
-                        <div class="form-text">简要说明该系统的用途</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="username" class="form-label">登录账号</label>
-                        <input type="text" class="form-control" id="username" name="username" 
-                               value="{{ link.username if link else '' }}" autocomplete="off">
-                        <div class="form-text">用于自动填充的登录账号，留空表示不需要</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">登录密码</label>
-                        <div class="input-group">
-                            <input type="password" class="form-control" id="password" name="password" 
-                                   value="{{ link.password if link else '' }}" autocomplete="off">
-                            <button class="btn btn-outline-secondary" type="button" id="toggle-password">
-                                <i class="bi bi-eye"></i>
-                            </button>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">系统名称 <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required
+                                   value="{{ link.name if link else '' }}" placeholder="例如：深信服 AF">
                         </div>
-                        <div class="form-text">用于自动填充的登录密码，留空表示不需要</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="sort_order" class="form-label">排序序号</label>
-                        <input type="number" class="form-control" id="sort_order" name="sort_order" 
-                               value="{{ link.sort_order if link else 0 }}" min="0" max="999">
-                        <div class="form-text">数字越小排序越靠前，默认为0</div>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('quick_access.quick_access') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left me-1"></i>返回
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>
-                            {% if link %}更新系统{% else %}添加系统{% endif %}
-                        </button>
+                        <div class="col-md-6">
+                            <label class="form-label">访问地址 <span class="text-danger">*</span></label>
+                            <input type="text" name="url" class="form-control" required
+                                   value="{{ link.url if link else '' }}"
+                                   placeholder="https://10.0.0.1 或 /internal/page">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">描述</label>
+                            <input type="text" name="description" class="form-control"
+                                   value="{{ link.description if link else '' }}" placeholder="简短描述用途...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">用户名（可选）</label>
+                            <input type="text" name="username" class="form-control"
+                                   value="{{ link.username if link else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">密码（可选）</label>
+                            <input type="password" name="password" class="form-control"
+                                   value="{{ link.password if link else '' }}">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i> {{ '更新' if link else '保存' }}
+                            </button>
+                            <a href="{{ url_for('quick_access.quick_access') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-lg"></i> 取消
+                            </a>
+                        </div>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.getElementById('toggle-password').addEventListener('click', function() {
-    var pwd = document.getElementById('password');
-    var icon = this.querySelector('i');
-    if (pwd.type === 'password') {
-        pwd.type = 'text';
-        icon.className = 'bi bi-eye-slash';
-    } else {
-        pwd.type = 'password';
-        icon.className = 'bi bi-eye';
-    }
-});
-</script>
 {% endblock %}

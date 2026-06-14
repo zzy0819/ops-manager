@@ -1,276 +1,390 @@
 {% extends 'base.html' %}
 {% block title %}中控大屏{% endblock %}
 {% block page_title %}中控大屏{% endblock %}
-{% block content %}
+{% block extra_css %}
 <style>
+    /* ===== 中控大屏 - 深信服科技风格 ===== */
     .dashboard-wrapper {
-        margin: -24px -28px;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-        color: white;
-        min-height: calc(100vh - 57px);
-        padding: 24px 28px;
+        margin: -20px -24px;
+        min-height: calc(100vh - var(--header-h));
+        padding: 20px 24px 24px;
+        background: linear-gradient(160deg, #040b1a 0%, #0a1628 30%, #0c2463 60%, #0a1628 100%);
+        color: #e0e8ff;
+        position: relative;
+        overflow: hidden;
     }
-    .dashboard-header {
+    /* 科技感网格背景 */
+    .dashboard-wrapper::before {
+        content: '';
+        position: absolute; inset: 0;
+        background-image:
+            linear-gradient(rgba(22,119,255,.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(22,119,255,.06) 1px, transparent 1px);
+        background-size: 48px 48px;
+        pointer-events: none;
+    }
+    /* 顶部标题区 */
+    .dash-header {
         text-align: center;
-        margin-bottom: 28px;
-        padding: 24px;
-        background: rgba(255, 255, 255, 0.06);
-        border-radius: 16px;
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 24px;
+        position: relative; z-index: 1;
     }
-    .dashboard-header h1 {
-        font-size: 2.2rem;
-        margin-bottom: 6px;
+    .dash-header h1 {
+        font-size: 26px; font-weight: 700;
+        background: linear-gradient(90deg, #1677ff, #00d4ff, #1677ff);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shimmer 3s linear infinite;
+        letter-spacing: 2px;
     }
-    .dashboard-header .time {
-        font-size: 1.2rem;
-        opacity: 0.7;
+    @keyframes shimmer { to { background-position: 200% center; } }
+    .dash-header .dash-time {
+        font-size: 13px; color: rgba(255,255,255,.45);
+        font-variant-numeric: tabular-nums;
+        margin-top: 4px;
     }
-    .dash-stat-card {
-        background: rgba(255, 255, 255, 0.06);
-        border-radius: 16px;
-        padding: 28px 20px;
-        margin-bottom: 20px;
-        text-align: center;
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        transition: transform 0.3s, background 0.3s;
-    }
-    .dash-stat-card:hover {
-        transform: translateY(-4px);
-        background: rgba(255, 255, 255, 0.1);
-    }
-    .dash-stat-card i { font-size: 2.8rem; margin-bottom: 12px; }
-    .dash-stat-card h3 { font-size: 2.5rem; margin: 8px 0; font-weight: 700; }
-    .dash-stat-card p { font-size: 0.95rem; opacity: 0.75; margin: 0; }
-    .chart-container {
-        background: rgba(255, 255, 255, 0.06);
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        height: 320px;
-    }
-    .chart-title {
-        font-size: 1.1rem;
-        margin-bottom: 16px;
-        text-align: center;
-        opacity: 0.85;
-        font-weight: 600;
-    }
-    .recent-list {
-        background: rgba(255, 255, 255, 0.06);
-        border-radius: 16px;
-        padding: 20px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        height: 320px;
-        overflow-y: auto;
-    }
-    .recent-list h4 { margin-bottom: 14px; text-align: center; opacity: 0.85; }
-    .list-item {
-        background: rgba(255, 255, 255, 0.04);
+
+    /* 统计卡片 */
+    .dash-stat {
+        background: rgba(22,119,255,.08);
+        border: 1px solid rgba(22,119,255,.18);
         border-radius: 10px;
-        padding: 10px 14px;
-        margin-bottom: 8px;
-        border-left: 4px solid;
-        font-size: 0.88rem;
-    }
-    .list-item-attack { border-left-color: #ff6b6b; }
-    .list-item-config { border-left-color: #4dabf7; }
-    .list-item-ticket { border-left-color: #ffd43b; }
-    .dashboard-footer {
+        padding: 20px 16px;
         text-align: center;
-        margin-top: 24px;
-        padding: 16px;
-        opacity: 0.55;
-        font-size: 0.85rem;
+        transition: all .25s;
+        position: relative; z-index: 1;
+        overflow: hidden;
     }
+    .dash-stat::before {
+        content: '';
+        position: absolute; top: 0; left: 0;
+        width: 100%; height: 2px;
+        background: linear-gradient(90deg, transparent, var(--glow-color, #1677ff), transparent);
+    }
+    .dash-stat:hover {
+        background: rgba(22,119,255,.14);
+        border-color: rgba(22,119,255,.35);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(22,119,255,.12);
+    }
+    .dash-stat i { font-size: 30px; display: block; margin-bottom: 8px; }
+    .dash-stat .stat-value {
+        font-size: 32px; font-weight: 800;
+        line-height: 1.1;
+        text-shadow: 0 0 12px var(--glow-color, rgba(22,119,255,.4));
+    }
+    .dash-stat .stat-label { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 4px; }
+    .dash-stat .stat-extra { margin-top: 8px; }
+    .dash-stat .stat-extra .badge {
+        font-size: 10px; padding: 2px 8px;
+        border-radius: 4px; font-weight: 600;
+    }
+
+    /* 图表面板 */
+    .dash-panel {
+        background: rgba(22,119,255,.06);
+        border: 1px solid rgba(22,119,255,.12);
+        border-radius: 10px;
+        padding: 16px;
+        height: 310px;
+        position: relative; z-index: 1;
+        display: flex; flex-direction: column;
+    }
+    .dash-panel-title {
+        font-size: 13px; font-weight: 600; color: rgba(255,255,255,.7);
+        margin-bottom: 12px; text-align: center;
+        letter-spacing: .5px;
+    }
+    .dash-panel .chart-body { flex: 1; position: relative; }
+
+    /* 最近列表 */
+    .dash-list {
+        background: rgba(22,119,255,.06);
+        border: 1px solid rgba(22,119,255,.12);
+        border-radius: 10px;
+        padding: 16px;
+        height: 310px;
+        display: flex; flex-direction: column;
+        position: relative; z-index: 1;
+    }
+    .dash-list-title {
+        font-size: 13px; font-weight: 600; color: rgba(255,255,255,.7);
+        margin-bottom: 12px; text-align: center;
+    }
+    .dash-list-items { flex: 1; overflow-y: auto; }
+    .dash-list-item {
+        background: rgba(255,255,255,.04);
+        border-radius: 6px;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        border-left: 3px solid var(--item-color, #1677ff);
+        font-size: 12px;
+    }
+    .dash-list-item .item-row { display: flex; justify-content: space-between; align-items: center; }
+    .dash-list-item .item-meta { color: rgba(255,255,255,.4); font-size: 11px; margin-top: 2px; }
+
+    /* 底部 */
+    .dash-footer {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 11px; color: rgba(255,255,255,.25);
+        position: relative; z-index: 1;
+    }
+
+    /* Chart.js 深色主题覆盖 */
+    .dash-panel canvas { width: 100% !important; height: 100% !important; }
 </style>
+{% endblock %}
 
+{% block content %}
 <div class="dashboard-wrapper">
-    <div class="dashboard-header">
-        <h1><i class="bi bi-speedometer2"></i> 运维管理中控大屏</h1>
-        <div class="time" id="current-time"></div>
+    <!-- 标题 -->
+    <div class="dash-header">
+        <h1><i class="bi bi-display me-2"></i>运维管理中控大屏</h1>
+        <div class="dash-time" id="dashTime"></div>
     </div>
 
-    <div class="row">
-        <div class="col-md-3">
-            <div class="dash-stat-card">
-                <i class="bi bi-shield-exclamation text-danger"></i>
-                <h3>{{ stats.attack_count }}</h3>
-                <p>攻击事件总数</p>
-                <div class="mt-2"><span class="badge bg-danger">今日 {{ stats.today_attacks }} 起</span></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="dash-stat-card">
-                <i class="bi bi-gear text-primary"></i>
-                <h3>{{ stats.config_count }}</h3>
-                <p>配置变更总数</p>
-                <div class="mt-2"><span class="badge bg-primary">今日 {{ stats.today_configs }} 次</span></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="dash-stat-card">
-                <i class="bi bi-ticket-detailed text-warning"></i>
-                <h3>{{ stats.ticket_count }}</h3>
-                <p>工单总数</p>
-                <div class="mt-2"><span class="badge bg-warning text-dark">待处理 {{ stats.pending_tickets }} 个</span></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="dash-stat-card">
-                <i class="bi bi-activity text-success"></i>
-                <h3>{{ stats.resolution_rate }}%</h3>
-                <p>工单解决率</p>
-                <div class="mt-2"><span class="badge bg-success">平均处理 {{ stats.avg_resolution_hours|round(1) }} 小时</span></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-4">
-            <div class="chart-container">
-                <div class="chart-title">攻击事件严重程度分布</div>
-                <div id="attack-severity-chart" style="height: 250px;"></div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="chart-container">
-                <div class="chart-title">工单状态分布</div>
-                <div id="ticket-status-chart" style="height: 250px;"></div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="chart-container">
-                <div class="chart-title">配置变更类型分布</div>
-                <div id="config-type-chart" style="height: 250px;"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-4">
-            <div class="recent-list">
-                <h4><i class="bi bi-shield-exclamation text-danger"></i> 最近攻击事件</h4>
-                {% if recent_attacks %}
-                {% for a in recent_attacks %}
-                <div class="list-item list-item-attack">
-                    <div class="d-flex justify-content-between">
-                        <strong>{{ a.attack_type }}</strong>
-                        <small>{{ a.attack_time.strftime('%H:%M') }}</small>
-                    </div>
-                    <div class="small">
-                        {{ a.source_ip }} → {{ a.target_ip }}
-                        <span class="badge {{ 'bg-danger' if a.severity in ['高危','严重'] else 'bg-warning text-dark' if a.severity == '中危' else 'bg-success' }}">{{ a.severity }}</span>
-                    </div>
+    <!-- 统计卡片行 -->
+    <div class="row g-3 mb-3">
+        <div class="col-xl-3 col-md-6">
+            <div class="dash-stat" style="--glow-color: rgba(245,63,63,.5)">
+                <i class="bi bi-shield-exclamation" style="color:#f53f3f"></i>
+                <div class="stat-value" style="color:#f53f3f">{{ stats.attack_count }}</div>
+                <div class="stat-label">攻击事件总数</div>
+                <div class="stat-extra">
+                    <span class="badge" style="background:rgba(245,63,63,.15);color:#f53f3f">今日 {{ stats.today_attacks }} 起</span>
                 </div>
-                {% endfor %}
-                {% else %}
-                <p class="text-center text-muted">暂无攻击事件</p>
-                {% endif %}
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="recent-list">
-                <h4><i class="bi bi-gear text-primary"></i> 最近配置变更</h4>
-                {% if recent_configs %}
-                {% for c in recent_configs %}
-                <div class="list-item list-item-config">
-                    <div class="d-flex justify-content-between">
-                        <strong>{{ c.device_name }}</strong>
-                        <small>{{ c.change_time.strftime('%H:%M') }}</small>
-                    </div>
-                    <div class="small">
-                        {{ c.config_type }}
-                        <span class="badge {{ 'bg-success' if c.change_status == '成功' else 'bg-danger' }}">{{ c.change_status }}</span>
-                    </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="dash-stat" style="--glow-color: rgba(22,119,255,.5)">
+                <i class="bi bi-gear" style="color:#1677ff"></i>
+                <div class="stat-value" style="color:#1677ff">{{ stats.config_count }}</div>
+                <div class="stat-label">配置变更总数</div>
+                <div class="stat-extra">
+                    <span class="badge" style="background:rgba(22,119,255,.15);color:#1677ff">今日 {{ stats.today_configs }} 次</span>
                 </div>
-                {% endfor %}
-                {% else %}
-                <p class="text-center text-muted">暂无配置变更</p>
-                {% endif %}
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="recent-list">
-                <h4><i class="bi bi-ticket-detailed text-warning"></i> 最近工单</h4>
-                {% if recent_tickets %}
-                {% for t in recent_tickets %}
-                <div class="list-item list-item-ticket">
-                    <div class="d-flex justify-content-between">
-                        <strong>{{ t.requester }}</strong>
-                        <small>{{ t.create_time.strftime('%H:%M') }}</small>
-                    </div>
-                    <div class="small">
-                        {{ t.problem_type }}
-                        <span class="badge {{ 'bg-danger' if t.priority == '紧急' else 'bg-warning text-dark' if t.priority == '高' else 'bg-primary' if t.priority == '中' else 'bg-success' }}">{{ t.priority }}</span>
-                    </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="dash-stat" style="--glow-color: rgba(255,125,0,.5)">
+                <i class="bi bi-ticket-detailed" style="color:#ff7d00"></i>
+                <div class="stat-value" style="color:#ff7d00">{{ stats.ticket_count }}</div>
+                <div class="stat-label">工单总数</div>
+                <div class="stat-extra">
+                    <span class="badge" style="background:rgba(255,125,0,.15);color:#ff7d00">待处理 {{ stats.pending_tickets }} 个</span>
                 </div>
-                {% endfor %}
-                {% else %}
-                <p class="text-center text-muted">暂无工单</p>
-                {% endif %}
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="dash-stat" style="--glow-color: rgba(0,180,42,.5)">
+                <i class="bi bi-activity" style="color:#00b42a"></i>
+                <div class="stat-value" style="color:#00b42a">{{ stats.resolution_rate }}%</div>
+                <div class="stat-label">工单解决率</div>
+                <div class="stat-extra">
+                    <span class="badge" style="background:rgba(0,180,42,.15);color:#00b42a">平均 {{ stats.avg_resolution_hours|round(1) }}h</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-12">
-            <div class="chart-container">
-                <div class="chart-title">近7天活动趋势</div>
-                <div id="trend-chart" style="height: 250px;"></div>
+    <!-- 图表行 -->
+    <div class="row g-3 mb-3">
+        <div class="col-xl-4 col-md-6">
+            <div class="dash-panel">
+                <div class="dash-panel-title">攻击事件严重程度分布</div>
+                <div class="chart-body"><canvas id="chartSeverity"></canvas></div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6">
+            <div class="dash-panel">
+                <div class="dash-panel-title">工单状态分布</div>
+                <div class="chart-body"><canvas id="chartTicket"></canvas></div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6">
+            <div class="dash-panel">
+                <div class="dash-panel-title">配置变更类型分布</div>
+                <div class="chart-body"><canvas id="chartConfig"></canvas></div>
             </div>
         </div>
     </div>
 
-    <div class="dashboard-footer">
-        <p>数据更新时间: <span id="update-time">{{ now.strftime('%Y-%m-%d %H:%M:%S') }}</span> | 系统运行正常</p>
+    <!-- 最近记录行 -->
+    <div class="row g-3 mb-3">
+        <div class="col-xl-4 col-md-6">
+            <div class="dash-list">
+                <div class="dash-list-title"><i class="bi bi-shield-exclamation me-1" style="color:#f53f3f"></i>最近攻击事件</div>
+                <div class="dash-list-items">
+                    {% if recent_attacks %}
+                    {% for a in recent_attacks %}
+                    <div class="dash-list-item" style="--item-color: {{ '#f53f3f' if a.severity in ['高危','严重'] else ('#ff7d00' if a.severity=='中危' else '#00b42a') }}">
+                        <div class="item-row">
+                            <strong style="font-size:12px">{{ a.attack_type }}</strong>
+                            <span style="color:rgba(255,255,255,.35);font-size:11px">{{ a.attack_time.strftime('%H:%M') }}</span>
+                        </div>
+                        <div class="item-meta">{{ a.source_ip }} → {{ a.target_ip }}
+                            <span class="badge" style="font-size:10px;padding:1px 5px;background:{{ 'rgba(245,63,63,.2)' if a.severity in ['高危','严重'] else ('rgba(255,125,0,.2)' if a.severity=='中危' else 'rgba(0,180,42,.2)') }};color:{{ '#f53f3f' if a.severity in ['高危','严重'] else ('#ff7d00' if a.severity=='中危' else '#00b42a') }}">{{ a.severity }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center" style="color:rgba(255,255,255,.25);padding:30px 0">暂无数据</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6">
+            <div class="dash-list">
+                <div class="dash-list-title"><i class="bi bi-gear me-1" style="color:#1677ff"></i>最近配置变更</div>
+                <div class="dash-list-items">
+                    {% if recent_configs %}
+                    {% for c in recent_configs %}
+                    <div class="dash-list-item" style="--item-color: #1677ff">
+                        <div class="item-row">
+                            <strong style="font-size:12px">{{ c.device_name }}</strong>
+                            <span style="color:rgba(255,255,255,.35);font-size:11px">{{ c.change_time.strftime('%H:%M') }}</span>
+                        </div>
+                        <div class="item-meta">{{ c.config_type }}
+                            <span class="badge" style="font-size:10px;padding:1px 5px;background:{{ 'rgba(0,180,42,.2)' if c.change_status=='成功' else 'rgba(245,63,63,.2)' }};color:{{ '#00b42a' if c.change_status=='成功' else '#f53f3f' }}">{{ c.change_status }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center" style="color:rgba(255,255,255,.25);padding:30px 0">暂无数据</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6">
+            <div class="dash-list">
+                <div class="dash-list-title"><i class="bi bi-ticket-detailed me-1" style="color:#ff7d00"></i>最近工单</div>
+                <div class="dash-list-items">
+                    {% if recent_tickets %}
+                    {% for t in recent_tickets %}
+                    <div class="dash-list-item" style="--item-color: {{ '#f53f3f' if t.priority=='紧急' else ('#ff7d00' if t.priority=='高' else ('#1677ff' if t.priority=='中' else '#00b42a')) }}">
+                        <div class="item-row">
+                            <strong style="font-size:12px">{{ t.requester }}</strong>
+                            <span style="color:rgba(255,255,255,.35);font-size:11px">{{ t.create_time.strftime('%H:%M') }}</span>
+                        </div>
+                        <div class="item-meta">{{ t.problem_type }}
+                            <span class="badge" style="font-size:10px;padding:1px 5px;background:{{ 'rgba(245,63,63,.2)' if t.priority=='紧急' else ('rgba(255,125,0,.2)' if t.priority=='高' else ('rgba(22,119,255,.2)' if t.priority=='中' else 'rgba(0,180,42,.2)') }};color:{{ '#f53f3f' if t.priority=='紧急' else ('#ff7d00' if t.priority=='高' else ('#1677ff' if t.priority=='中' else '#00b42a')) }}">{{ t.priority }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center" style="color:rgba(255,255,255,.25);padding:30px 0">暂无数据</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 趋势图 -->
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="dash-panel" style="height:300px">
+                <div class="dash-panel-title">近 7 天活动趋势</div>
+                <div class="chart-body"><canvas id="chartTrend"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dash-footer">
+        数据更新时间：<span id="updateTime">{{ now.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+        &nbsp;|&nbsp; 系统运行正常
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script>
-    function updateTime() {
-        var now = new Date();
-        document.getElementById('current-time').textContent = now.toLocaleString('zh-CN', {
-            year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
-        });
+/* 时钟 */
+(function(){
+    function tick(){
+        var d=new Date();
+        document.getElementById('dashTime').textContent=
+            d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+
+            String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+        setTimeout(tick,1000);
     }
-    updateTime(); setInterval(updateTime, 1000);
+    tick();
+})();
 
-    var chartOpts = {responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'white'}}}};
+/* Chart.js 全局深色配置 */
+Chart.defaults.color='rgba(255,255,255,.6)';
+Chart.defaults.borderColor='rgba(255,255,255,.08)';
+Chart.defaults.font.family="'PingFang SC','Microsoft YaHei',sans-serif";
 
-    new Chart(document.getElementById('attack-severity-chart'), {
-        type:'doughnut',
-        data:{labels:{{ attack_severity_labels|tojson }},datasets:[{data:{{ attack_severity_data|tojson }},backgroundColor:['#28a745','#ffc107','#fd7e14','#dc3545']}]},
-        options:chartOpts
-    });
-    new Chart(document.getElementById('ticket-status-chart'), {
-        type:'pie',
-        data:{labels:{{ ticket_status_labels|tojson }},datasets:[{data:{{ ticket_status_data|tojson }},backgroundColor:['#6c757d','#17a2b8','#28a745','#343a40','#e9ecef']}]},
-        options:chartOpts
-    });
-    new Chart(document.getElementById('config-type-chart'), {
-        type:'bar',
-        data:{labels:{{ config_type_labels|tojson }},datasets:[{label:'变更次数',data:{{ config_type_data|tojson }},backgroundColor:'rgba(77,171,247,0.6)',borderColor:'#4dabf7',borderWidth:1}]},
-        options:Object.assign({},chartOpts,{scales:{y:{beginAtZero:true,ticks:{color:'white'},grid:{color:'rgba(255,255,255,0.1)'}},x:{ticks:{color:'white'},grid:{color:'rgba(255,255,255,0.1)'}}}})
-    });
-    new Chart(document.getElementById('trend-chart'), {
-        type:'line',
-        data:{labels:{{ trend_labels|tojson }},datasets:[
-            {label:'攻击事件',data:{{ trend_attack_data|tojson }},borderColor:'#ff6b6b',backgroundColor:'rgba(255,107,107,0.1)',tension:0.3},
-            {label:'配置变更',data:{{ trend_config_data|tojson }},borderColor:'#4dabf7',backgroundColor:'rgba(77,171,247,0.1)',tension:0.3},
-            {label:'工单',data:{{ trend_ticket_data|tojson }},borderColor:'#ffd43b',backgroundColor:'rgba(255,212,59,0.1)',tension:0.3}
-        ]},
-        options:Object.assign({},chartOpts,{scales:{y:{beginAtZero:true,ticks:{color:'white'},grid:{color:'rgba(255,255,255,0.1)'}},x:{ticks:{color:'white'},grid:{color:'rgba(255,255,255,0.1)'}}}})
-    });
+var chartFontColor='rgba(255,255,255,.6)';
 
-    setTimeout(function(){window.location.reload();},30000);
+/* 1. 攻击严重程度 */
+new Chart(document.getElementById('chartSeverity'),{
+    type:'doughnut',
+    data:{
+        labels:{{ attack_severity_labels|tojson }},
+        datasets:[{data:{{ attack_severity_data|tojson }},backgroundColor:['#00b42a','#ff7d00','#f53f3f','#9316f5'],borderWidth:0}]
+    },
+    options:{
+        responsive:true,maintainAspectRatio:false,cutout:'60%',
+        plugins:{legend:{position:'bottom',labels:{color:chartFontColor,font:{size:11},padding:12}}}
+    }
+});
+
+/* 2. 工单状态 */
+new Chart(document.getElementById('chartTicket'),{
+    type:'pie',
+    data:{
+        labels:{{ ticket_status_labels|tojson }},
+        datasets:[{data:{{ ticket_status_data|tojson }},backgroundColor:['#86909c','#1677ff','#00b42a','#1d2129','#e5e8ed'],borderWidth:0}]
+    },
+    options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom',labels:{color:chartFontColor,font:{size:11},padding:12}}}
+    }
+});
+
+/* 3. 配置变更类型 */
+new Chart(document.getElementById('chartConfig'),{
+    type:'bar',
+    data:{
+        labels:{{ config_type_labels|tojson }},
+        datasets:[{label:'变更次数',data:{{ config_type_data|tojson }},
+            backgroundColor:'rgba(22,119,255,.6)',borderColor:'#1677ff',borderWidth:1,borderRadius:4}]
+    },
+    options:{
+        responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{
+            y:{beginAtZero:true,ticks:{color:chartFontColor,font:{size:10}},grid:{color:'rgba(255,255,255,.06)'}},
+            x:{ticks:{color:chartFontColor,font:{size:10}},grid:{display:false}}
+        }
+    }
+});
+
+/* 4. 趋势图 */
+new Chart(document.getElementById('chartTrend'),{
+    type:'line',
+    data:{
+        labels:{{ trend_labels|tojson }},
+        datasets:[
+            {label:'攻击事件',data:{{ trend_attack_data|tojson }},borderColor:'#f53f3f',backgroundColor:'rgba(245,63,63,.1)',tension:.35,fill:true,pointRadius:2,pointHoverRadius:5},
+            {label:'配置变更',data:{{ trend_config_data|tojson }},borderColor:'#1677ff',backgroundColor:'rgba(22,119,255,.1)',tension:.35,fill:true,pointRadius:2,pointHoverRadius:5},
+            {label:'工单',data:{{ trend_ticket_data|tojson }},borderColor:'#ff7d00',backgroundColor:'rgba(255,125,0,.1)',tension:.35,fill:true,pointRadius:2,pointHoverRadius:5}
+        ]
+    },
+    options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:chartFontColor,font:{size:11},padding:16}}},
+        scales:{
+            y:{beginAtZero:true,ticks:{color:chartFontColor,font:{size:10}},grid:{color:'rgba(255,255,255,.06)'}},
+            x:{ticks:{color:chartFontColor,font:{size:10}},grid:{display:false}}
+        }
+    }
+});
+
+/* 30秒自动刷新 */
+setTimeout(function(){window.location.reload();},30000);
 </script>
 {% endblock %}
+
+{% block scripts %}{% endblock %}

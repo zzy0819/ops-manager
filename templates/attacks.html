@@ -3,8 +3,6 @@
 {% block page_title %}攻击事件{% endblock %}
 {% block content %}
 
-<h2 class="mb-3"><i class="bi bi-shield-exclamation text-danger"></i> 网络安全攻击事件记录</h2>
-
 <div class="d-flex justify-content-end mb-3">
     <a href="{{ url_for('attacks.attack_create') }}" class="btn btn-danger">
         <i class="bi bi-plus-lg"></i> 新增攻击事件
@@ -41,8 +39,8 @@
             </div>
         </form>
 
-        <table class="table table-hover table-bordered align-middle">
-            <thead class="table-light">
+        <table class="table table-hover align-middle">
+            <thead>
                 <tr>
                     <th>ID</th>
                     <th>攻击时间</th>
@@ -67,11 +65,11 @@
                 <td><code>{{ a.target_ip }}</code></td>
                 <td>{{ a.target_port or '-' }}</td>
                 <td>
-                    {% set sev_class = {'低危': 'severity-low', '中危': 'severity-medium', '高危': 'severity-high', '严重': 'severity-critical'} %}
+                    {% set sev_class = {'低危': 'bg-severity-low', '中危': 'bg-severity-medium', '高危': 'bg-severity-high', '严重': 'bg-severity-critical'} %}
                     <span class="badge {{ sev_class.get(a.severity, '') }}">{{ a.severity }}</span>
                 </td>
                 <td>
-                    {% set st_class = {'未处理': 'status-pending', '处理中': 'status-processing', '已处理': 'status-resolved', '误报': 'status-false-positive'} %}
+                    {% set st_class = {'未处理': 'bg-status-pending', '处理中': 'bg-status-processing', '已处理': 'bg-status-resolved', '误报': 'bg-status-false'} %}
                     <span class="badge {{ st_class.get(a.status, '') }}">{{ a.status }}</span>
                 </td>
                 <td>{{ a.handler or '-' }}</td>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}IP扫描 - 运维管理系统{% endblock %}
+{% block title %}IP扫描{% endblock %}
 {% block page_title %}IP扫描{% endblock %}
 
 {% block content %}
@@ -7,18 +7,17 @@
     <h2 class="mb-0"><i class="bi bi-search me-2"></i>内网IP存活扫描</h2>
 </div>
 
-<div class="row">
-    <!-- 扫描表单 -->
+<div class="row g-3">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-play-circle me-2"></i>开始扫描</h5>
+            <div class="card-header">
+                <i class="bi bi-play-circle me-2"></i>开始扫描
             </div>
             <div class="card-body">
                 <form method="post">
                     <div class="mb-3">
                         <label for="subnet" class="form-label">目标网段</label>
-                        <input type="text" class="form-control" id="subnet" name="subnet" 
+                        <input type="text" class="form-control" id="subnet" name="subnet"
                                placeholder="例如: 192.168.1.0/24, 10.0.0.0/16" required>
                         <div class="form-text">
                             支持 CIDR 格式，建议扫描 /24 或更小的子网（最多 256 个 IP）
@@ -32,14 +31,13 @@
         </div>
     </div>
 
-    <!-- 使用说明 -->
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>使用说明</h5>
+            <div class="card-header">
+                <i class="bi bi-info-circle me-2"></i>使用说明
             </div>
             <div class="card-body">
-                <ul class="list-unstyled">
+                <ul class="list-unstyled mb-0">
                     <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>使用 ICMP ping 检测 IP 存活</li>
                     <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>200 线程并发扫描，/24 网段约 2~3 秒完成</li>
                     <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>扫描结果自动保存为文本文件</li>
@@ -51,10 +49,9 @@
     </div>
 </div>
 
-<!-- 历史记录 -->
-<div class="card mt-4">
+<div class="card mt-3">
     <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>最近扫描记录</h5>
+        <i class="bi bi-clock-history me-2"></i>最近扫描记录
     </div>
     <div class="card-body p-0">
         {% if history %}
@@ -115,10 +112,7 @@
             </table>
         </div>
         {% else %}
-        <div class="text-center py-4 text-muted">
-            <i class="bi bi-search display-6"></i>
-            <p class="mt-2">暂无扫描记录</p>
-        </div>
+        <div class="empty-state"><i class="bi bi-search"></i>暂无扫描记录</div>
         {% endif %}
     </div>
 </div>

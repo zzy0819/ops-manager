@@ -3,8 +3,6 @@
 {% block page_title %}配置变更{% endblock %}
 {% block content %}
 
-<h2 class="mb-3"><i class="bi bi-gear text-primary"></i> 网络配置变更记录</h2>
-
 <div class="d-flex justify-content-end mb-3">
     <a href="{{ url_for('configs.config_create') }}" class="btn btn-primary">
         <i class="bi bi-plus-lg"></i> 新增配置变更
@@ -41,8 +39,8 @@
             </div>
         </form>
 
-        <table class="table table-hover table-bordered align-middle">
-            <thead class="table-light">
+        <table class="table table-hover align-middle">
+            <thead>
                 <tr>
                     <th>ID</th>
                     <th>变更时间</th>
@@ -64,7 +62,7 @@
                 <td>{{ c.change_time.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>{{ c.device_name }}</td>
                 <td><code>{{ c.device_ip }}</code></td>
-                <td><span class="badge bg-info">{{ c.config_type }}</span></td>
+                <td><span class="badge bg-primary">{{ c.config_type }}</span></td>
                 <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
                     title="{{ c.change_content }}">{{ c.change_content }}</td>
                 <td>{{ c.operator }}</td>

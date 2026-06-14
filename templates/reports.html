@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid p-0">
     <!-- 时间范围选择 -->
-    <div class="card mb-3 border-0 shadow-sm">
+    <div class="card mb-3">
         <div class="card-body py-2">
             <form method="get" action="{{ url_for('reports.reports') }}" class="row g-2 align-items-end">
                 <div class="col-auto">
@@ -42,16 +42,15 @@
         </div>
     </div>
 
-    <!-- 统计信息行 -->
     <div class="d-flex justify-content-between align-items-center mb-2 px-1">
         <small class="text-muted">{{ period_start }} ~ {{ period_end }}（共 {{ delta_days }} 天）</small>
         <small class="text-muted">生成时间：<span id="genTime"></span></small>
     </div>
 
-    <!-- KPI 指标卡片（始终可见） -->
+    <!-- KPI 指标卡片 -->
     <div class="row g-2 mb-3">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm border-start border-danger border-3 h-100">
+            <div class="card border-start border-danger border-3 h-100">
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -66,7 +65,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm border-start border-warning border-3 h-100">
+            <div class="card border-start border-warning border-3 h-100">
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -81,7 +80,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm border-start border-primary border-3 h-100">
+            <div class="card border-start border-primary border-3 h-100">
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -98,7 +97,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm border-start border-success border-3 h-100">
+            <div class="card border-start border-success border-3 h-100">
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -115,7 +114,7 @@
     </div>
 
     <!-- Tab 导航 -->
-    <ul class="nav nav-tabs mb-3 border-0" id="reportTabs" role="tablist">
+    <ul class="nav nav-tabs mb-3" id="reportTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="attack-tab" data-bs-toggle="tab" data-bs-target="#attackPane" type="button" role="tab">
                 <i class="bi bi-shield-exclamation text-danger me-1"></i>攻击事件
@@ -144,8 +143,8 @@
         <div class="tab-pane fade show active" id="attackPane" role="tabpanel">
             <div class="row g-3">
                 <div class="col-lg-7">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                    <div class="card">
+                        <div class="card-header">
                             <i class="bi bi-graph-up text-danger me-2"></i>每日趋势
                         </div>
                         <div class="card-body" style="height:280px">
@@ -154,8 +153,8 @@
                     </div>
                 </div>
                 <div class="col-lg-5">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                    <div class="card">
+                        <div class="card-header">
                             <i class="bi bi-pie-chart text-danger me-2"></i>按类型分布
                         </div>
                         <div class="card-body" style="height:280px">
@@ -166,8 +165,8 @@
             </div>
             <div class="row g-3 mt-0">
                 <div class="col-12">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                    <div class="card">
+                        <div class="card-header">
                             <i class="bi bi-bar-chart-steps text-warning me-2"></i>按严重程度分布
                         </div>
                         <div class="card-body" style="height:220px">
@@ -182,8 +181,8 @@
         <div class="tab-pane fade" id="configPane" role="tabpanel">
             <div class="row g-3">
                 <div class="col-lg-8">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                    <div class="card">
+                        <div class="card-header">
                             <i class="bi bi-graph-up text-warning me-2"></i>每日趋势
                         </div>
                         <div class="card-body" style="height:280px">
@@ -192,8 +191,8 @@
                     </div>
                 </div>
                 <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                    <div class="card">
+                        <div class="card-header">
                             <i class="bi bi-check-all text-success me-2"></i>变更状态
                         </div>
                         <div class="card-body" style="height:280px">
@@ -204,8 +203,8 @@
             </div>
             <div class="row g-3 mt-0">
                 <div class="col-12">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                    <div class="card">
+                        <div class="card-header">
                             <i class="bi bi-diagram-3 text-info me-2"></i>按配置类型分布
                         </div>
                         <div class="card-body" style="height:240px">
@@ -220,7 +219,7 @@
         <div class="tab-pane fade" id="ticketPane" role="tabpanel">
             <div class="row g-3">
                 <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm text-center">
+                    <div class="card text-center">
                         <div class="card-body py-4">
                             <div class="text-muted small mb-1">工单总数</div>
                             <h1 class="fw-bold text-primary mb-0">{{ ticket_total }}</h1>
@@ -229,7 +228,7 @@
                     </div>
                 </div>
                 <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm text-center">
+                    <div class="card text-center">
                         <div class="card-body py-4">
                             <div class="text-muted small mb-1">待处理</div>
                             <h1 class="fw-bold text-warning mb-0">{{ ticket_pending }}</h1>
@@ -238,7 +237,7 @@
                     </div>
                 </div>
                 <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm text-center">
+                    <div class="card text-center">
                         <div class="card-body py-4">
                             <div class="text-muted small mb-1">已解决</div>
                             <h1 class="fw-bold text-success mb-0">{{ ticket_resolved }}</h1>
@@ -249,8 +248,8 @@
             </div>
             <div class="row g-3 mt-0">
                 <div class="col-12">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                    <div class="card">
+                        <div class="card-header">
                             <i class="bi bi-pie-chart text-primary me-2"></i>工单状态占比
                         </div>
                         <div class="card-body" style="height:320px">
@@ -265,8 +264,8 @@
         <div class="tab-pane fade" id="devicePane" role="tabpanel">
             <div class="row g-3">
                 <div class="col-lg-5">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                    <div class="card">
+                        <div class="card-header">
                             <i class="bi bi-pie-chart text-success me-2"></i>设备类型分布
                         </div>
                         <div class="card-body" style="height:340px">
@@ -275,13 +274,13 @@
                     </div>
                 </div>
                 <div class="col-lg-7">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                    <div class="card h-100">
+                        <div class="card-header">
                             <i class="bi bi-list-ul text-success me-2"></i>设备资产明细
                         </div>
                         <div class="card-body p-0" style="max-height:340px;overflow-y:auto">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light sticky-top">
+                                <thead class="sticky-top" style="background:#f7f8fa">
                                     <tr>
                                         <th>设备类型</th>
                                         <th class="text-center" style="width:80px">数量</th>
@@ -319,7 +318,6 @@
 <script>
 document.getElementById('genTime').textContent = new Date().toLocaleString('zh-CN');
 
-// 攻击趋势
 new Chart(document.getElementById('attackTrendChart'), {
     type: 'line',
     data: {
@@ -327,10 +325,10 @@ new Chart(document.getElementById('attackTrendChart'), {
         datasets: [{
             label: '攻击数量',
             data: {{ attack_trend_data | tojson }},
-            borderColor: '#dc3545',
-            backgroundColor: 'rgba(220,53,69,0.1)',
+            borderColor: '#f53f3f',
+            backgroundColor: 'rgba(245,63,63,0.1)',
             fill: true, tension: 0.3,
-            pointBackgroundColor: '#dc3545', pointRadius: 3
+            pointBackgroundColor: '#f53f3f', pointRadius: 3
         }]
     },
     options: {
@@ -340,14 +338,13 @@ new Chart(document.getElementById('attackTrendChart'), {
     }
 });
 
-// 攻击类型
 new Chart(document.getElementById('attackTypeChart'), {
     type: 'doughnut',
     data: {
         labels: [{% for atype, cnt in attack_by_type.items() if cnt > 0 %}'{{ atype }}',{% endfor %}],
         datasets: [{
             data: [{% for atype, cnt in attack_by_type.items() if cnt > 0 %}{{ cnt }},{% endfor %}],
-            backgroundColor: ['#dc3545','#fd7e14','#ffc107','#0dcaf0','#198754','#6f42c1','#d63384','#0d6efd','#20c997','#adb5bd']
+            backgroundColor: ['#f53f3f','#ff7d00','#ffc107','#0dcaf0','#198754','#6f42c1','#d63384','#0d6efd','#20c997','#adb5bd']
         }]
     },
     options: {
@@ -356,7 +353,6 @@ new Chart(document.getElementById('attackTypeChart'), {
     }
 });
 
-// 严重程度
 new Chart(document.getElementById('attackSeverityChart'), {
     type: 'bar',
     data: {
@@ -364,7 +360,7 @@ new Chart(document.getElementById('attackSeverityChart'), {
         datasets: [{
             label: '数量',
             data: {{ attack_by_severity.values() | list | tojson }},
-            backgroundColor: ['#198754','#ffc107','#fd7e14','#dc3545']
+            backgroundColor: ['#198754','#ffc107','#ff7d00','#f53f3f']
         }]
     },
     options: {
@@ -374,7 +370,6 @@ new Chart(document.getElementById('attackSeverityChart'), {
     }
 });
 
-// 配置趋势
 new Chart(document.getElementById('configTrendChart'), {
     type: 'line',
     data: {
@@ -395,14 +390,13 @@ new Chart(document.getElementById('configTrendChart'), {
     }
 });
 
-// 配置状态
 new Chart(document.getElementById('configStatusChart'), {
     type: 'doughnut',
     data: {
         labels: [{% for status, cnt in config_by_status.items() %}'{{ status }}',{% endfor %}],
         datasets: [{
             data: [{% for status, cnt in config_by_status.items() %}{{ cnt }},{% endfor %}],
-            backgroundColor: ['#198754','#dc3545','#ffc107']
+            backgroundColor: ['#198754','#f53f3f','#ffc107']
         }]
     },
     options: {
@@ -411,7 +405,6 @@ new Chart(document.getElementById('configStatusChart'), {
     }
 });
 
-// 配置类型
 new Chart(document.getElementById('configTypeChart'), {
     type: 'bar',
     data: {
@@ -419,7 +412,7 @@ new Chart(document.getElementById('configTypeChart'), {
         datasets: [{
             label: '变更次数',
             data: [{% for ctype, cnt in config_by_type.items() %}{{ cnt }},{% endfor %}],
-            backgroundColor: ['#0d6efd','#6610f2','#6f42c1','#d63384','#dc3545','#fd7e14','#ffc107','#198754']
+            backgroundColor: ['#0d6efd','#6610f2','#6f42c1','#d63384','#f53f3f','#ff7d00','#ffc107','#198754']
         }]
     },
     options: {
@@ -429,14 +422,13 @@ new Chart(document.getElementById('configTypeChart'), {
     }
 });
 
-// 工单状态饼图
 new Chart(document.getElementById('ticketStatusChart'), {
     type: 'doughnut',
     data: {
         labels: ['待处理', '已解决', '其他'],
         datasets: [{
             data: [{{ ticket_pending }}, {{ ticket_resolved }}, {{ ticket_total - ticket_pending - ticket_resolved if ticket_total > ticket_pending + ticket_resolved else 0 }}],
-            backgroundColor: ['#ffc107','#198754','#6c757d']
+            backgroundColor: ['#ffc107','#198754','#86909c']
         }]
     },
     options: {
@@ -445,14 +437,13 @@ new Chart(document.getElementById('ticketStatusChart'), {
     }
 });
 
-// 设备类型饼图
 new Chart(document.getElementById('deviceTypeChart'), {
     type: 'doughnut',
     data: {
         labels: [{% for dtype, cnt in device_by_type %}'{{ dtype }}',{% endfor %}],
         datasets: [{
             data: [{% for dtype, cnt in device_by_type %}{{ cnt }},{% endfor %}],
-            backgroundColor: ['#198754','#0d6efd','#fd7e14','#ffc107','#6f42c1','#d63384','#0dcaf0','#20c997','#adb5bd','#6610f2']
+            backgroundColor: ['#198754','#0d6efd','#ff7d00','#ffc107','#6f42c1','#d63384','#0dcaf0','#20c997','#adb5bd','#6610f2']
         }]
     },
     options: {
@@ -461,7 +452,6 @@ new Chart(document.getElementById('deviceTypeChart'), {
     }
 });
 
-// Tab 初始化 resize（解决隐藏 tab 中 canvas 尺寸问题）
 document.querySelectorAll('#reportTabs button[data-bs-toggle="tab"]').forEach(function(btn) {
     btn.addEventListener('shown.bs.tab', function() {
         window.dispatchEvent(new Event('resize'));

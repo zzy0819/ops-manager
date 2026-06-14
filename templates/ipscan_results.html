@@ -1,430 +1,79 @@
 {% extends "base.html" %}
-{% block title %}扫描结果 - 运维管理系统{% endblock %}
+{% block title %}扫描结果{% endblock %}
 {% block page_title %}扫描结果{% endblock %}
-
-{% block extra_css %}
-<style>
-    .stat-card {
-        border-radius: 10px;
-        border: none;
-        text-align: center;
-        padding: 1rem;
-    }
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 700;
-    }
-    .stat-label {
-        font-size: 0.8rem;
-        color: #888;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    .result-content {
-        background: #1e1e1e;
-        color: #d4d4d4;
-        padding: 1.5rem;
-        border-radius: 8px;
-        font-family: 'Consolas', 'Courier New', monospace;
-        font-size: 0.9rem;
-        line-height: 1.8;
-        white-space: pre-wrap;
-        max-height: 500px;
-        overflow-y: auto;
-    }
-    .result-content::-webkit-scrollbar { width: 6px; }
-    .result-content::-webkit-scrollbar-track { background: #2d2d2d; }
-    .result-content::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
-
-    /* IP 网格 */
-    .ip-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 3px;
-        justify-content: center;
-    }
-    .ip-cell {
-        width: 52px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.65rem;
-        font-weight: 600;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: transform 0.15s;
-        position: relative;
-        color: #fff;
-        font-family: 'Consolas', monospace;
-    }
-    .ip-cell:hover {
-        transform: scale(1.15);
-        z-index: 10;
-    }
-    .ip-cell.alive {
-        background: linear-gradient(135deg, #28a745, #20c997);
-    }
-    .ip-cell.dead {
-        background: #3a3d42;
-    }
-    .ip-cell.network { background: #6c757d; }
-    .ip-cell.broadcast { background: #dc3545; }
-
-    /* 存活 IP 卡片 */
-    .alive-ip-tag {
-        display: inline-block;
-        background: rgba(40, 167, 69, 0.12);
-        border: 1px solid rgba(40, 167, 69, 0.3);
-        color: #28a745;
-        border-radius: 6px;
-        padding: 3px 10px;
-        margin: 2px;
-        font-family: 'Consolas', monospace;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
-    /* 进度条 */
-    .progress {
-        height: 28px;
-        border-radius: 14px;
-    }
-    .progress-bar {
-        font-size: 0.8rem;
-        font-weight: 600;
-        transition: width 0.3s ease;
-    }
-
-    /* 图例 */
-    .legend-item {
-        display: inline-flex;
-        align-items: center;
-        margin-right: 1rem;
-        font-size: 0.82rem;
-    }
-    .legend-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 3px;
-        margin-right: 4px;
-    }
-</style>
-{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">
-        <i class="bi bi-clipboard-check me-2"></i>扫描结果
-    </h2>
     <div>
-        <a href="{{ url_for('ip_scan.ip_scan') }}" class="btn btn-outline-secondary btn-sm me-2">
-            <i class="bi bi-arrow-left me-1"></i>返回
-        </a>
-        <form method="post" action="{{ url_for('ip_scan.ip_scan_delete', scan_id=scan.id) }}" style="display:inline;"
-              onsubmit="return confirm('确定删除该扫描记录？')">
-            <button type="submit" class="btn btn-outline-danger btn-sm">
-                <i class="bi bi-trash me-1"></i>删除
-            </button>
-        </form>
+        <h2 class="mb-0"><i class="bi bi-search me-2"></i>扫描结果</h2>
+        <small class="text-muted">{{ scan.subnet }} | {{ scan.scan_time.strftime('%Y-%m-%d %H:%M:%S') }}</small>
     </div>
-</div>
-
-<!-- 统计卡片 -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card stat-card bg-primary bg-opacity-10">
-            <div class="stat-value text-primary">{{ scan.total_ips }}</div>
-            <div class="stat-label">扫描总数</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stat-card bg-success bg-opacity-10">
-            <div class="stat-value text-success" id="alive-count">{{ scan.alive_ips }}</div>
-            <div class="stat-label">存活主机</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stat-card bg-info bg-opacity-10">
-            <div class="stat-value text-info" id="dead-count">{{ scan.total_ips - scan.alive_ips }}</div>
-            <div class="stat-label">离线主机</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stat-card bg-warning bg-opacity-10">
-            <div class="stat-value text-warning">
-                {% if scan.total_ips > 0 %}
-                {{ "%.1f"|format(scan.alive_ips / scan.total_ips * 100) }}%
-                {% else %}0%{% endif %}
-            </div>
-            <div class="stat-label">存活率</div>
-        </div>
-    </div>
-</div>
-
-<!-- 进度条 (扫描中) -->
-{% if not result_content %}
-<div class="card mb-4" id="progress-card">
-    <div class="card-body">
-        <div class="d-flex justify-content-between mb-2">
-            <span class="fw-bold"><i class="bi bi-hourglass-split me-1"></i>扫描进行中</span>
-            <span class="text-muted" id="progress-text">0 / {{ scan.total_ips }}</span>
-        </div>
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                 id="progress-bar" role="progressbar" style="width: 0%">0%</div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<!-- 扫描信息 -->
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-3">
-                <small class="text-muted">目标网段</small>
-                <div><code class="fs-6">{{ scan.subnet }}</code></div>
-            </div>
-            <div class="col-md-3">
-                <small class="text-muted">扫描时间</small>
-                <div>{{ scan.scan_time.strftime('%Y-%m-%d %H:%M:%S') }}</div>
-            </div>
-            <div class="col-md-3">
-                <small class="text-muted">耗时</small>
-                <div>{% if scan.scan_duration > 0 %}{{ "%.2f"|format(scan.scan_duration) }} 秒{% else %}扫描中...{% endif %}</div>
-            </div>
-            <div class="col-md-3">
-                <small class="text-muted">模式</small>
-                <div>200 线程并发 / 300ms 超时</div>
-            </div>
-        </div>
-    </div>
+    <a href="{{ url_for('ip_scan.ip_scan') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i>返回
+    </a>
 </div>
 
 <div class="row g-3 mb-4">
-    <!-- 饼图 -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-header"><h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>存活比例</h6></div>
-            <div class="card-body d-flex align-items-center justify-content-center">
-                <canvas id="pieChart" style="max-height:220px"></canvas>
-            </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="bi bi-hdd-network" style="color:#1677ff"></i>
+            <h3 style="color:#1677ff">{{ scan.total_ips }}</h3>
+            <p>IP 总数</p>
         </div>
     </div>
-
-    <!-- 图例和汇总 -->
-    <div class="col-md-8">
-        <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="bi bi-grid-3x3-gap me-2"></i>IP 矩阵 <small class="text-muted">({{ scan.subnet }})</small></h6>
-                <div>
-                    <span class="legend-item"><span class="legend-dot" style="background:#28a745"></span>存活</span>
-                    <span class="legend-item"><span class="legend-dot" style="background:#3a3d42"></span>离线</span>
-                    {% if all_ips %}
-                    <span class="legend-item"><span class="legend-dot" style="background:#6c757d"></span>网络/广播</span>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="card-body" style="max-height:300px;overflow-y:auto">
-                <div class="ip-grid" id="ip-grid">
-                    {% if all_ips %}
-                        {% for ip in all_ips %}
-                        <div class="ip-cell {% if ip in alive_hosts %}alive{% else %}dead{% endif %}" 
-                             title="{% if ip in alive_hosts %}存活{% else %}离线{% endif %}: {{ ip }}"
-                             data-ip="{{ ip }}"
-                             data-alive="{{ 'true' if ip in alive_hosts else 'false' }}">
-                            {{ ip.split('.')[-1] }}
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                    <div class="text-center text-muted py-4">扫描进行中，矩阵即将呈现...</div>
-                    {% endif %}
-                </div>
-            </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="bi bi-check-circle" style="color:#00b42a"></i>
+            <h3 style="color:#00b42a">{{ scan.alive_ips }}</h3>
+            <p>存活主机</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="bi bi-x-circle" style="color:#f53f3f"></i>
+            <h3 style="color:#f53f3f">{{ scan.total_ips - scan.alive_ips }}</h3>
+            <p>未存活</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <i class="bi bi-clock" style="color:#ff7d00"></i>
+            <h3 style="color:#ff7d00">{{ "%.2f"|format(scan.scan_duration) }}</h3>
+            <p>耗时(秒)</p>
         </div>
     </div>
 </div>
 
-<!-- 存活主机列表 -->
-{% if alive_hosts %}
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0"><i class="bi bi-hdd-stack me-2"></i>存活主机列表 <span class="badge bg-success ms-2">{{ alive_hosts|length }}</span></h6>
-        <button class="btn btn-outline-secondary btn-sm" onclick="copyAliveIPs()">
-            <i class="bi bi-clipboard me-1"></i>复制全部
-        </button>
-    </div>
-    <div class="card-body" id="alive-list">
-        {% for ip in alive_hosts %}
-        <span class="alive-ip-tag" data-ip="{{ ip }}">{{ ip }}</span>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<!-- 原文结果 -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0"><i class="bi bi-file-text me-2"></i>详细日志</h6>
+        <span><i class="bi bi-list-ul me-2"></i>存活主机列表</span>
+        <span class="badge bg-success">{{ scan.alive_ips }} 台</span>
     </div>
     <div class="card-body p-0">
-        {% if result_content %}
-        <div class="result-content">{{ result_content }}</div>
-        {% else %}
-        <div class="text-center py-3 text-muted" id="log-placeholder">
-            <small>扫描完成后显示详细日志...</small>
+        {% if alive_hosts %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>IP 地址</th>
+                        <th>响应时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for host in alive_hosts %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><code>{{ host.ip }}</code></td>
+                        <td>{{ "%.2f"|format(host.response_time) }} ms</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-inbox"></i>未检测到存活主机</div>
         {% endif %}
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-// ========== 饼图 ==========
-(function() {
-    const alive = {{ scan.alive_ips or 0 }};
-    const dead = {{ (scan.total_ips - scan.alive_ips) if scan.total_ips else 0 }};
-    const ctx = document.getElementById('pieChart');
-    if (ctx) {
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['存活', '离线'],
-                datasets: [{
-                    data: [alive, dead],
-                    backgroundColor: ['#28a745', '#3a3d42'],
-                    borderColor: ['#28a745', '#3a3d42'],
-                    borderWidth: 0,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                cutout: '60%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10 } }
-                }
-            }
-        });
-    }
-})();
-
-// ========== 实时进度轮询 ==========
-{% if not result_content %}
-let pollTimer = null;
-
-function pollProgress() {
-    fetch("{{ url_for('ip_scan.scan_progress', scan_id=scan.id) }}")
-        .then(r => r.json())
-        .then(data => {
-            const pct = data.total > 0 ? Math.round(data.scanned / data.total * 100) : 0;
-            const bar = document.getElementById('progress-bar');
-            const text = document.getElementById('progress-text');
-            if (bar) {
-                bar.style.width = pct + '%';
-                bar.textContent = pct + '%';
-            }
-            if (text) text.textContent = data.scanned + ' / ' + data.total;
-
-            // 更新统计数据
-            document.getElementById('alive-count').textContent = data.alive;
-            document.getElementById('dead-count').textContent = data.total - data.alive;
-
-            // 更新 IP 网格
-            if (data.all_ips && data.all_ips.length > 0) {
-                updateIPGrid(data);
-            }
-
-            // 更新存活列表
-            if (data.alive_hosts && data.alive_hosts.length > 0) {
-                updateAliveList(data.alive_hosts);
-            }
-
-            if (data.status === 'done') {
-                // 扫描完成，刷新页面
-                setTimeout(() => location.reload(), 1500);
-                return;
-            }
-            if (data.status === 'error') {
-                document.getElementById('progress-bar').classList.add('bg-danger');
-                return;
-            }
-            pollTimer = setTimeout(pollProgress, 1000);
-        })
-        .catch(() => {
-            pollTimer = setTimeout(pollProgress, 2000);
-        });
-}
-
-function updateIPGrid(data) {
-    const grid = document.getElementById('ip-grid');
-    if (!grid) return;
-    const aliveSet = new Set(data.alive_hosts || []);
-    if (grid.children.length === 0 || grid.children[0].classList.contains('text-center')) {
-        // 初次渲染网格
-        grid.innerHTML = '';
-        data.all_ips.forEach(ip => {
-            const cell = document.createElement('div');
-            const lastOctet = ip.split('.')[3];
-            const isAlive = aliveSet.has(ip);
-            cell.className = 'ip-cell ' + (isAlive ? 'alive' : 'dead');
-            cell.title = (isAlive ? '存活' : '离线') + ': ' + ip;
-            cell.textContent = lastOctet;
-            cell.setAttribute('data-ip', ip);
-            cell.setAttribute('data-alive', isAlive);
-            grid.appendChild(cell);
-        });
-    } else {
-        // 增量更新：只更新存活状态变化的
-        Array.from(grid.children).forEach(cell => {
-            const ip = cell.getAttribute('data-ip');
-            if (ip && aliveSet.has(ip) && cell.getAttribute('data-alive') !== 'true') {
-                cell.className = 'ip-cell alive';
-                cell.setAttribute('data-alive', 'true');
-                cell.title = '存活: ' + ip;
-            }
-        });
-    }
-}
-
-function updateAliveList(hosts) {
-    const list = document.getElementById('alive-list');
-    if (!list) {
-        // 创建列表容器
-        const card = document.createElement('div');
-        card.className = 'card mb-4';
-        card.innerHTML = '<div class="card-header d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-hdd-stack me-2"></i>存活主机列表 <span class="badge bg-success ms-2">' + hosts.length + '</span></h6><button class="btn btn-outline-secondary btn-sm" onclick="copyAliveIPs()"><i class="bi bi-clipboard me-1"></i>复制全部</button></div><div class="card-body" id="alive-list"></div>';
-        const gridCard = document.querySelector('.ip-grid').closest('.row');
-        if (gridCard) gridCard.after(card);
-    }
-    const listEl = document.getElementById('alive-list');
-    if (listEl) {
-        listEl.innerHTML = hosts.map(ip => '<span class="alive-ip-tag" data-ip="' + ip + '">' + ip + '</span>').join('');
-    }
-}
-
-pollProgress();
-{% endif %}
-
-// ========== 复制存活 IP ==========
-function copyAliveIPs() {
-    const tags = document.querySelectorAll('#alive-list .alive-ip-tag');
-    const ips = Array.from(tags).map(t => t.getAttribute('data-ip')).join('\n');
-    navigator.clipboard.writeText(ips).then(() => {
-        const btn = event.target.closest('button');
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>已复制';
-        btn.classList.add('btn-success');
-        btn.classList.remove('btn-outline-secondary');
-        setTimeout(() => {
-            btn.innerHTML = orig;
-            btn.classList.remove('btn-success');
-            btn.classList.add('btn-outline-secondary');
-        }, 2000);
-    });
-}
-</script>
 {% endblock %}

@@ -3,8 +3,6 @@
 {% block page_title %}工单管理{% endblock %}
 {% block content %}
 
-<h2 class="mb-3"><i class="bi bi-ticket-detailed text-warning"></i> 运维工单记录</h2>
-
 <div class="d-flex justify-content-end mb-3">
     <a href="{{ url_for('tickets.ticket_create') }}" class="btn btn-warning">
         <i class="bi bi-plus-lg"></i> 新建工单
@@ -49,8 +47,8 @@
             </div>
         </form>
 
-        <table class="table table-hover table-bordered align-middle">
-            <thead class="table-light">
+        <table class="table table-hover align-middle">
+            <thead>
                 <tr>
                     <th>工单号</th>
                     <th>创建时间</th>
@@ -75,12 +73,12 @@
                 <td>{{ t.contact }}</td>
                 <td><span class="badge bg-info">{{ t.problem_type }}</span></td>
                 <td>
-                    {% set pr_class = {'低': 'bg-success', '中': 'bg-warning text-dark', '高': 'bg-orange', '紧急': 'bg-danger'} %}
-                    <span class="badge {{ pr_class.get(t.priority, 'bg-warning text-dark') }}">{{ t.priority }}</span>
+                    {% set pr_class = {'低': 'bg-severity-low', '中': 'bg-severity-medium', '高': 'bg-severity-high', '紧急': 'bg-severity-critical'} %}
+                    <span class="badge {{ pr_class.get(t.priority, 'bg-severity-medium') }}">{{ t.priority }}</span>
                 </td>
                 <td>
-                    {% set st_class = {'待处理': 'bg-secondary', '处理中': 'bg-primary', '已解决': 'bg-success', '已关闭': 'bg-dark', '已取消': 'bg-light text-dark'} %}
-                    <span class="badge {{ st_class.get(t.status, 'bg-secondary') }}">{{ t.status }}</span>
+                    {% set st_class = {'待处理': 'bg-status-pending', '处理中': 'bg-status-processing', '已解决': 'bg-status-resolved', '已关闭': 'bg-status-false', '已取消': 'bg-status-pending'} %}
+                    <span class="badge {{ st_class.get(t.status, 'bg-status-pending') }}">{{ t.status }}</span>
                 </td>
                 <td>{{ t.assignee or '-' }}</td>
                 <td nowrap>

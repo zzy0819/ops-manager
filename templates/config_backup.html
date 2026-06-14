@@ -1,12 +1,13 @@
 {% extends "base.html" %}
+{% block title %}设备配置备份{% endblock %}
 {% block page_title %}设备配置备份{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-10">
-        <div class="card shadow-sm">
+        <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-hdd-stack me-2"></i>交换机配置批量备份</h5>
+                <span><i class="bi bi-hdd-stack me-2"></i>交换机配置批量备份</span>
                 <span class="badge bg-primary">华三交换机</span>
             </div>
             <div class="card-body">
@@ -27,10 +28,9 @@
                     </div>
                 </div>
 
-                <!-- 全局凭据（可选） -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h6 class="mb-0"><i class="bi bi-key me-2"></i>全局凭据（可选）</h6>
+                        <i class="bi bi-key me-2"></i>全局凭据（可选）
                     </div>
                     <div class="card-body">
                         <div class="form-check mb-3">
@@ -65,7 +65,6 @@
                     </div>
                 </div>
 
-                <!-- 设备列表 -->
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
@@ -117,7 +116,6 @@
                     </table>
                 </div>
 
-                <!-- 分页 -->
                 {% if devices.pages > 1 %}
                 <nav aria-label="分页">
                     <ul class="pagination justify-content-center">
@@ -146,10 +144,9 @@
             </div>
         </div>
 
-        <!-- 结果面板 -->
-        <div class="card shadow-sm mt-4" id="resultPanel" style="display:none">
+        <div class="card mt-4" id="resultPanel" style="display:none">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>备份结果</h5>
+                <i class="bi bi-clipboard-check me-2"></i>备份结果
             </div>
             <div class="card-body">
                 <div id="resultList"></div>
@@ -162,12 +159,10 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // 全选/反选
     $('#selectAll').change(function() {
         $('.device-check').prop('checked', $(this).prop('checked'));
     });
 
-    // 全局凭据显示/隐藏
     $('#useGlobalCreds').change(function() {
         if ($(this).prop('checked')) {
             $('#globalCreds').slideDown();
@@ -176,7 +171,6 @@ $(document).ready(function() {
         }
     });
 
-    // 开始备份
     $('#startBackup').click(function() {
         const checked = $('.device-check:checked');
         if (checked.length === 0) {
@@ -200,7 +194,6 @@ $(document).ready(function() {
             data.password = $('#globalPassword').val();
         }
 
-        // 禁用按钮
         const btn = $(this);
         btn.prop('disabled', true).html('<i class="bi bi-hourglass-split me-2"></i>备份中...');
 
