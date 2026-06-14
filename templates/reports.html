@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+{% block title %}周报/月报{% endblock %}
+{% block page_title %}周报 / 月报{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- 时间范围选择 -->
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-body py-2">
+            <form method="get" action="{{ url_for('reports.reports') }}" class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small text-muted mb-0">报告类型</label>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a href="?type=weekly" class="btn btn-outline-primary {% if report_type == 'weekly' or not report_type %}active{% endif %}">
+                            <i class="bi bi-calendar-week me-1"></i> 周报
+                        </a>
+                        <a href="?type=monthly" class="btn btn-outline-primary {% if report_type == 'monthly' %}active{% endif %}">
+                            <i class="bi bi-calendar-month me-1"></i> 月报
+                        </a>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small text-muted mb-0">时间范围</label>
+                    <div class="d-flex gap-1 align-items-center">
+                        <input type="date" class="form-control form-control-sm" name="start" value="{{ period_start }}" style="width:140px">
+                        <span class="text-muted">~</span>
+                        <input type="date" class="form-control form-control-sm" name="end" value="{{ period_end }}" style="width:140px">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>生成</button>
+                </div>
+                <div class="col-auto ms-auto d-flex gap-1">
+                    <a href="{{ url_for('reports.export_excel', start=period_start, end=period_end) }}" class="btn btn-success btn-sm">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                    </a>
+                    <a href="{{ url_for('reports.export_pdf', start=period_start, end=period_end) }}" class="btn btn-danger btn-sm" target="_blank">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 统计信息行 -->
+    <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+        <small class="text-muted">{{ period_start }} ~ {{ period_end }}（共 {{ delta_days }} 天）</small>
+        <small class="text-muted">生成时间：<span id="genTime"></span></small>
+    </div>
+
+    <!-- KPI 指标卡片（始终可见） -->
+    <div class="row g-2 mb-3">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-danger border-3 h-100">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted">攻击事件</small>
+                            <span class="fw-bold text-danger ms-2 fs-5">{{ attack_total }}</span><small class="text-muted"> 起</small>
+                        </div>
+                        <div class="rounded-circle bg-danger bg-opacity-10 p-2">
+                            <i class="bi bi-shield-exclamation text-danger fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-warning border-3 h-100">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted">配置变更</small>
+                            <span class="fw-bold text-warning ms-2 fs-5">{{ config_total }}</span><small class="text-muted"> 次</small>
+                        </div>
+                        <div class="rounded-circle bg-warning bg-opacity-10 p-2">
+                            <i class="bi bi-gear text-warning fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-primary border-3 h-100">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted">运维工单</small>
+                            <span class="fw-bold text-primary ms-2 fs-5">{{ ticket_total }}</span><small class="text-muted"> 张</small>
+                            <span class="ms-2 badge bg-warning text-dark" style="font-size:0.7rem">待 {{ ticket_pending }}</span>
+                            <span class="badge bg-success" style="font-size:0.7rem">已解 {{ ticket_resolved }}</span>
+                        </div>
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-2">
+                            <i class="bi bi-ticket-detailed text-primary fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm border-start border-success border-3 h-100">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted">设备资产</small>
+                            <span class="fw-bold text-success ms-2 fs-5">{{ device_total }}</span><small class="text-muted"> 台</small>
+                        </div>
+                        <div class="rounded-circle bg-success bg-opacity-10 p-2">
+                            <i class="bi bi-router text-success fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 导航 -->
+    <ul class="nav nav-tabs mb-3 border-0" id="reportTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="attack-tab" data-bs-toggle="tab" data-bs-target="#attackPane" type="button" role="tab">
+                <i class="bi bi-shield-exclamation text-danger me-1"></i>攻击事件
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="config-tab" data-bs-toggle="tab" data-bs-target="#configPane" type="button" role="tab">
+                <i class="bi bi-gear text-warning me-1"></i>配置变更
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="ticket-tab" data-bs-toggle="tab" data-bs-target="#ticketPane" type="button" role="tab">
+                <i class="bi bi-ticket-detailed text-primary me-1"></i>运维工单
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="device-tab" data-bs-toggle="tab" data-bs-target="#devicePane" type="button" role="tab">
+                <i class="bi bi-hdd-stack text-success me-1"></i>设备资产
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab 内容 -->
+    <div class="tab-content" id="reportTabContent">
+        <!-- 攻击事件 -->
+        <div class="tab-pane fade show active" id="attackPane" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                            <i class="bi bi-graph-up text-danger me-2"></i>每日趋势
+                        </div>
+                        <div class="card-body" style="height:280px">
+                            <canvas id="attackTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                            <i class="bi bi-pie-chart text-danger me-2"></i>按类型分布
+                        </div>
+                        <div class="card-body" style="height:280px">
+                            <canvas id="attackTypeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 mt-0">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                            <i class="bi bi-bar-chart-steps text-warning me-2"></i>按严重程度分布
+                        </div>
+                        <div class="card-body" style="height:220px">
+                            <canvas id="attackSeverityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 配置变更 -->
+        <div class="tab-pane fade" id="configPane" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                            <i class="bi bi-graph-up text-warning me-2"></i>每日趋势
+                        </div>
+                        <div class="card-body" style="height:280px">
+                            <canvas id="configTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                            <i class="bi bi-check-all text-success me-2"></i>变更状态
+                        </div>
+                        <div class="card-body" style="height:280px">
+                            <canvas id="configStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 mt-0">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                            <i class="bi bi-diagram-3 text-info me-2"></i>按配置类型分布
+                        </div>
+                        <div class="card-body" style="height:240px">
+                            <canvas id="configTypeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 运维工单 -->
+        <div class="tab-pane fade" id="ticketPane" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm text-center">
+                        <div class="card-body py-4">
+                            <div class="text-muted small mb-1">工单总数</div>
+                            <h1 class="fw-bold text-primary mb-0">{{ ticket_total }}</h1>
+                            <small class="text-muted">张</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm text-center">
+                        <div class="card-body py-4">
+                            <div class="text-muted small mb-1">待处理</div>
+                            <h1 class="fw-bold text-warning mb-0">{{ ticket_pending }}</h1>
+                            <small class="text-muted">张</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm text-center">
+                        <div class="card-body py-4">
+                            <div class="text-muted small mb-1">已解决</div>
+                            <h1 class="fw-bold text-success mb-0">{{ ticket_resolved }}</h1>
+                            <small class="text-muted">张</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3 mt-0">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                            <i class="bi bi-pie-chart text-primary me-2"></i>工单状态占比
+                        </div>
+                        <div class="card-body" style="height:320px">
+                            <canvas id="ticketStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 设备资产 -->
+        <div class="tab-pane fade" id="devicePane" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                            <i class="bi bi-pie-chart text-success me-2"></i>设备类型分布
+                        </div>
+                        <div class="card-body" style="height:340px">
+                            <canvas id="deviceTypeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-0 fw-semibold py-2">
+                            <i class="bi bi-list-ul text-success me-2"></i>设备资产明细
+                        </div>
+                        <div class="card-body p-0" style="max-height:340px;overflow-y:auto">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>设备类型</th>
+                                        <th class="text-center" style="width:80px">数量</th>
+                                        <th style="width:180px">占比</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dtype, cnt in device_by_type %}
+                                    <tr>
+                                        <td>{{ dtype }}</td>
+                                        <td class="text-center"><span class="badge bg-secondary">{{ cnt }}</span></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1" style="height:6px;">
+                                                    <div class="progress-bar bg-success" style="width:{{ (cnt / device_total * 100) | round(1) }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ (cnt / device_total * 100) | round(1) }}%</small>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.getElementById('genTime').textContent = new Date().toLocaleString('zh-CN');
+
+// 攻击趋势
+new Chart(document.getElementById('attackTrendChart'), {
+    type: 'line',
+    data: {
+        labels: {{ attack_trend_labels | tojson }},
+        datasets: [{
+            label: '攻击数量',
+            data: {{ attack_trend_data | tojson }},
+            borderColor: '#dc3545',
+            backgroundColor: 'rgba(220,53,69,0.1)',
+            fill: true, tension: 0.3,
+            pointBackgroundColor: '#dc3545', pointRadius: 3
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+
+// 攻击类型
+new Chart(document.getElementById('attackTypeChart'), {
+    type: 'doughnut',
+    data: {
+        labels: [{% for atype, cnt in attack_by_type.items() if cnt > 0 %}'{{ atype }}',{% endfor %}],
+        datasets: [{
+            data: [{% for atype, cnt in attack_by_type.items() if cnt > 0 %}{{ cnt }},{% endfor %}],
+            backgroundColor: ['#dc3545','#fd7e14','#ffc107','#0dcaf0','#198754','#6f42c1','#d63384','#0d6efd','#20c997','#adb5bd']
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { padding: 10, usePointStyle: true, font: { size: 11 } } } }
+    }
+});
+
+// 严重程度
+new Chart(document.getElementById('attackSeverityChart'), {
+    type: 'bar',
+    data: {
+        labels: ['低危', '中危', '高危', '严重'],
+        datasets: [{
+            label: '数量',
+            data: {{ attack_by_severity.values() | list | tojson }},
+            backgroundColor: ['#198754','#ffc107','#fd7e14','#dc3545']
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+
+// 配置趋势
+new Chart(document.getElementById('configTrendChart'), {
+    type: 'line',
+    data: {
+        labels: {{ config_trend_labels | tojson }},
+        datasets: [{
+            label: '变更数量',
+            data: {{ config_trend_data | tojson }},
+            borderColor: '#ffc107',
+            backgroundColor: 'rgba(255,193,7,0.1)',
+            fill: true, tension: 0.3,
+            pointBackgroundColor: '#ffc107', pointRadius: 3
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+
+// 配置状态
+new Chart(document.getElementById('configStatusChart'), {
+    type: 'doughnut',
+    data: {
+        labels: [{% for status, cnt in config_by_status.items() %}'{{ status }}',{% endfor %}],
+        datasets: [{
+            data: [{% for status, cnt in config_by_status.items() %}{{ cnt }},{% endfor %}],
+            backgroundColor: ['#198754','#dc3545','#ffc107']
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { padding: 10, usePointStyle: true } } }
+    }
+});
+
+// 配置类型
+new Chart(document.getElementById('configTypeChart'), {
+    type: 'bar',
+    data: {
+        labels: [{% for ctype, cnt in config_by_type.items() %}'{{ ctype }}',{% endfor %}],
+        datasets: [{
+            label: '变更次数',
+            data: [{% for ctype, cnt in config_by_type.items() %}{{ cnt }},{% endfor %}],
+            backgroundColor: ['#0d6efd','#6610f2','#6f42c1','#d63384','#dc3545','#fd7e14','#ffc107','#198754']
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+
+// 工单状态饼图
+new Chart(document.getElementById('ticketStatusChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['待处理', '已解决', '其他'],
+        datasets: [{
+            data: [{{ ticket_pending }}, {{ ticket_resolved }}, {{ ticket_total - ticket_pending - ticket_resolved if ticket_total > ticket_pending + ticket_resolved else 0 }}],
+            backgroundColor: ['#ffc107','#198754','#6c757d']
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true } } }
+    }
+});
+
+// 设备类型饼图
+new Chart(document.getElementById('deviceTypeChart'), {
+    type: 'doughnut',
+    data: {
+        labels: [{% for dtype, cnt in device_by_type %}'{{ dtype }}',{% endfor %}],
+        datasets: [{
+            data: [{% for dtype, cnt in device_by_type %}{{ cnt }},{% endfor %}],
+            backgroundColor: ['#198754','#0d6efd','#fd7e14','#ffc107','#6f42c1','#d63384','#0dcaf0','#20c997','#adb5bd','#6610f2']
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { padding: 10, usePointStyle: true, font: { size: 11 } } } }
+    }
+});
+
+// Tab 初始化 resize（解决隐藏 tab 中 canvas 尺寸问题）
+document.querySelectorAll('#reportTabs button[data-bs-toggle="tab"]').forEach(function(btn) {
+    btn.addEventListener('shown.bs.tab', function() {
+        window.dispatchEvent(new Event('resize'));
+    });
+});
+</script>
+{% endblock %}

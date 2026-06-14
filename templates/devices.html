@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}设备台账{% endblock %}
+{% block page_title %}设备台账{% endblock %}
+{% block content %}
+
+<h2 class="mb-3"><i class="bi bi-hdd-stack text-info"></i> 网络设备台账</h2>
+
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ url_for('devices.device_create') }}" class="btn btn-info">
+        <i class="bi bi-plus-lg"></i> 新增设备
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form class="row g-3 mb-3" method="GET">
+            <div class="col-md-2">
+                <select name="device_type" class="form-select form-select-sm">
+                    <option value="">全部类型</option>
+                    {% for t in device_type_list %}
+                    <option value="{{ t }}" {% if device_type == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部状态</option>
+                    {% for s in status_list %}
+                    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" name="keyword" class="form-control form-control-sm" placeholder="搜索设备名/型号/序列号/IP/MAC/负责人" value="{{ keyword }}">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i> 搜索</button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('devices.device_create') }}" class="btn btn-sm btn-success w-100"><i class="bi bi-plus-lg"></i> 新增设备</a>
+            </div>
+        </form>
+
+        <table class="table table-hover table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>设备名称</th>
+                    <th>类型</th>
+                    <th>型号/序列号</th>
+                    <th>IP/MAC</th>
+                    <th>位置/机柜</th>
+                    <th>负责人</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% if devices.items %}
+            {% for d in devices.items %}
+            <tr>
+                <td>{{ d.id }}</td>
+                <td>
+                    <strong>{{ d.device_name }}</strong>
+                    {% if d.brand %}<br><small class="text-muted">{{ d.brand }}</small>{% endif %}
+                </td>
+                <td><span class="badge bg-secondary">{{ d.device_type }}</span></td>
+                <td>
+                    {% if d.model %}<div><small>型号: {{ d.model }}</small></div>{% endif %}
+                    {% if d.serial_number %}<div><small>序列号: <code>{{ d.serial_number }}</code></small></div>{% endif %}
+                </td>
+                <td>
+                    {% if d.ip_address %}<div><small>IP: <code>{{ d.ip_address }}</code></small></div>{% endif %}
+                    {% if d.mac_address %}<div><small>MAC: <code>{{ d.mac_address }}</code></small></div>{% endif %}
+                </td>
+                <td>
+                    {% if d.location %}<div><small>{{ d.location }}</small></div>{% endif %}
+                    {% if d.rack_position %}<div><small>机柜: {{ d.rack_position }}</small></div>{% endif %}
+                </td>
+                <td>
+                    {% if d.responsible_person %}<div>{{ d.responsible_person }}</div>{% endif %}
+                    {% if d.department %}<div><small class="text-muted">{{ d.department }}</small></div>{% endif %}
+                </td>
+                <td>
+                    {% set status_class = {
+                        '在线': 'bg-success',
+                        '离线': 'bg-secondary',
+                        '维修中': 'bg-warning text-dark',
+                        '已报废': 'bg-dark',
+                        '备件': 'bg-info'
+                    } %}
+                    <span class="badge {{ status_class.get(d.status, 'bg-secondary') }}">{{ d.status }}</span>
+                </td>
+                <td nowrap>
+                    <a href="{{ url_for('devices.device_edit', device_id=d.id) }}" class="btn btn-sm btn-outline-primary" title="编辑">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form method="POST" action="{{ url_for('devices.device_delete', device_id=d.id) }}" style="display:inline;"
+                          onsubmit="return confirm('确定删除此设备记录吗?');">
+                        <button class="btn btn-sm btn-outline-danger" title="删除"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr><td colspan="9" class="text-center text-muted py-4">暂无设备记录</td></tr>
+            {% endif %}
+            </tbody>
+        </table>
+
+        <nav>
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if devices.has_prev %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('devices.device_list', page=devices.prev_num, status=status, device_type=device_type, keyword=keyword) }}">上一页</a></li>
+                {% endif %}
+                {% for p in devices.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == devices.page }}"><a class="page-link" href="{{ url_for('devices.device_list', page=p, status=status, device_type=device_type, keyword=keyword) }}">{{ p }}</a></li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if devices.has_next %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('devices.device_list', page=devices.next_num, status=status, device_type=device_type, keyword=keyword) }}">下一页</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+{% endblock %}

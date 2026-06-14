@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}工单管理{% endblock %}
+{% block page_title %}工单管理{% endblock %}
+{% block content %}
+
+<h2 class="mb-3"><i class="bi bi-ticket-detailed text-warning"></i> 运维工单记录</h2>
+
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ url_for('tickets.ticket_create') }}" class="btn btn-warning">
+        <i class="bi bi-plus-lg"></i> 新建工单
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form class="row g-3 mb-3" method="GET">
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部状态</option>
+                    {% for s in status_list %}
+                    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="priority" class="form-select form-select-sm">
+                    <option value="">全部优先级</option>
+                    {% for p in priority_list %}
+                    <option value="{{ p }}" {% if priority == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="problem_type" class="form-select form-select-sm">
+                    <option value="">全部类型</option>
+                    {% for t in problem_type_list %}
+                    <option value="{{ t }}" {% if problem_type == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="text" name="keyword" class="form-control form-control-sm" placeholder="搜索工单号 / 申请人 / 处理人 / 描述" value="{{ keyword }}">
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i></button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('tickets.ticket_create') }}" class="btn btn-sm btn-success w-100"><i class="bi bi-plus-lg"></i> 新建工单</a>
+            </div>
+        </form>
+
+        <table class="table table-hover table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>工单号</th>
+                    <th>创建时间</th>
+                    <th>申请人</th>
+                    <th>部门</th>
+                    <th>联系方式</th>
+                    <th>问题类型</th>
+                    <th>优先级</th>
+                    <th>状态</th>
+                    <th>处理人</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% if tickets.items %}
+            {% for t in tickets.items %}
+            <tr>
+                <td><code>{{ t.ticket_number }}</code></td>
+                <td>{{ t.create_time.strftime('%m-%d %H:%M') }}</td>
+                <td>{{ t.requester }}</td>
+                <td>{{ t.department }}</td>
+                <td>{{ t.contact }}</td>
+                <td><span class="badge bg-info">{{ t.problem_type }}</span></td>
+                <td>
+                    {% set pr_class = {'低': 'bg-success', '中': 'bg-warning text-dark', '高': 'bg-orange', '紧急': 'bg-danger'} %}
+                    <span class="badge {{ pr_class.get(t.priority, 'bg-warning text-dark') }}">{{ t.priority }}</span>
+                </td>
+                <td>
+                    {% set st_class = {'待处理': 'bg-secondary', '处理中': 'bg-primary', '已解决': 'bg-success', '已关闭': 'bg-dark', '已取消': 'bg-light text-dark'} %}
+                    <span class="badge {{ st_class.get(t.status, 'bg-secondary') }}">{{ t.status }}</span>
+                </td>
+                <td>{{ t.assignee or '-' }}</td>
+                <td nowrap>
+                    <a href="{{ url_for('tickets.ticket_edit', ticket_id=t.id) }}" class="btn btn-sm btn-outline-primary" title="编辑">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form method="POST" action="{{ url_for('tickets.ticket_delete', ticket_id=t.id) }}" style="display:inline;"
+                          onsubmit="return confirm('确定删除该工单吗?');">
+                        <button class="btn btn-sm btn-outline-danger" title="删除"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr><td colspan="10" class="text-center text-muted py-4">暂无工单记录</td></tr>
+            {% endif %}
+            </tbody>
+        </table>
+
+        <nav>
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if tickets.has_prev %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('tickets.ticket_list', page=tickets.prev_num, status=status, priority=priority, problem_type=problem_type, keyword=keyword) }}">上一页</a></li>
+                {% endif %}
+                {% for p in tickets.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == tickets.page }}"><a class="page-link" href="{{ url_for('tickets.ticket_list', page=p, status=status, priority=priority, problem_type=problem_type, keyword=keyword) }}">{{ p }}</a></li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if tickets.has_next %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('tickets.ticket_list', page=tickets.next_num, status=status, priority=priority, problem_type=problem_type, keyword=keyword) }}">下一页</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+{% endblock %}

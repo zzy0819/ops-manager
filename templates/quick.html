@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}快速跳转 - 运维管理系统{% endblock %}
+{% block page_title %}快速跳转{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quick-card {
+        border-radius: 12px;
+        border: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+        position: relative;
+    }
+    .quick-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    .quick-card.external {
+        border-left: 4px solid #667eea;
+    }
+    .quick-card.internal {
+        border-left: 4px solid #6c757d;
+    }
+    .quick-card .card-body {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 1rem 1.2rem;
+    }
+    .quick-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        background: #f0f4ff;
+        color: #667eea;
+        flex-shrink: 0;
+    }
+    .quick-info { flex: 1; min-width: 0; }
+    .quick-name {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .quick-desc {
+        font-size: 0.78rem;
+        color: #999;
+        margin-bottom: 0;
+    }
+    .quick-url {
+        font-size: 0.7rem;
+        color: #bbb;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .quick-actions {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+    .quick-actions .btn {
+        padding: 2px 8px;
+        font-size: 0.75rem;
+    }
+    .empty-state {
+        padding: 60px 0;
+        text-align: center;
+    }
+    .empty-state i { font-size: 3rem; color: #ccc; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>系统快速跳转</h2>
+    <a href="{{ url_for('quick_access.quick_create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>添加系统
+    </a>
+</div>
+
+{% if quick_links %}
+<div class="row g-3">
+    {% for link in quick_links %}
+    <div class="col-md-4">
+        <div class="card quick-card {{ 'external' if link.url.startswith('http') else 'internal' }}">
+            <div class="card-body">
+                <div class="quick-icon">
+                    <i class="bi {{ 'bi-box-arrow-up-right' if link.url.startswith('http') else 'bi-link-45deg' }}"></i>
+                </div>
+                <div class="quick-info">
+                    <a href="{{ link.url }}" 
+                       {% if link.url.startswith('http') %}target="_blank"{% endif %}
+                       class="text-decoration-none text-dark stretched-link-link">
+                        <div class="quick-name">{{ link.name }}</div>
+                    </a>
+                    {% if link.description %}
+                    <p class="quick-desc mb-0">{{ link.description }}</p>
+                    {% endif %}
+                    <span class="quick-url">{{ link.url }}</span>
+                </div>
+                <div class="quick-actions">
+                    <a href="{{ link.url }}" 
+                       {% if link.url.startswith('http') %}target="_blank"{% endif %}
+                       class="btn btn-outline-primary btn-sm" title="打开">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    {% if link.has_credentials %}
+                    <button type="button" class="btn btn-outline-success btn-sm" title="自动填充" 
+                            onclick="fillCredentials('{{ link.username|default('') }}', '{{ link.password|default('') }}')">
+                        <i class="bi bi-key"></i>
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('quick_access.quick_edit', link_id=link.id) }}" 
+                       class="btn btn-outline-secondary btn-sm" title="编辑">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form method="post" action="{{ url_for('quick_access.quick_delete', link_id=link.id) }}" style="display:inline;"
+                          onsubmit="return confirm('确定删除「{{ link.name }}」？')">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" title="删除">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-inbox d-block mb-3"></i>
+    <h5>还没有添加任何系统</h5>
+    <p class="text-muted">点击右上角「添加系统」开始使用</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function fillCredentials(username, password) {
+    if (!username && !password) return;
+
+    var text = '';
+    if (username) text += '账号: ' + username;
+    if (password) text += (text ? '\n' : '') + '密码: ' + password;
+
+    var toast = document.createElement('div');
+    toast.className = 'alert alert-success position-fixed';
+    toast.style.cssText = 'top:20px;right:20px;z-index:9999;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,0.2);';
+    toast.innerHTML = '<strong><i class="bi bi-check-circle me-1"></i>凭据已就绪</strong><br>' +
+        '<small>账号已复制到剪贴板，点击目标页面输入框按 <kbd>Ctrl+V</kbd> 粘贴</small>' +
+        '<br><small class="text-muted mt-1">' + text.replace(/\n/g, '<br>') + '</small>' +
+        '<button type="button" class="btn-close float-end" onclick="this.parentElement.remove()"></button>';
+
+    document.body.appendChild(toast);
+
+    if (username) {
+        navigator.clipboard.writeText(username).then(function() {
+            setTimeout(function() { toast.remove(); }, 6000);
+        });
+    } else if (password) {
+        navigator.clipboard.writeText(password).then(function() {
+            setTimeout(function() { toast.remove(); }, 6000);
+        });
+    }
+}
+</script>
+{% endblock %}

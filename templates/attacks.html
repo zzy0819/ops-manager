@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}攻击事件{% endblock %}
+{% block page_title %}攻击事件{% endblock %}
+{% block content %}
+
+<h2 class="mb-3"><i class="bi bi-shield-exclamation text-danger"></i> 网络安全攻击事件记录</h2>
+
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ url_for('attacks.attack_create') }}" class="btn btn-danger">
+        <i class="bi bi-plus-lg"></i> 新增攻击事件
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form class="row g-3 mb-3" method="GET">
+            <div class="col-md-2">
+                <select name="severity" class="form-select form-select-sm">
+                    <option value="">全部严重度</option>
+                    {% for s in severity_list %}
+                    <option value="{{ s }}" {% if severity == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部状态</option>
+                    {% for s in status_list %}
+                    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" name="keyword" class="form-control form-control-sm" placeholder="搜索 IP / 描述 / 处理人" value="{{ keyword }}">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i> 搜索</button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('attacks.attack_create') }}" class="btn btn-sm btn-success w-100"><i class="bi bi-plus-lg"></i> 新增记录</a>
+            </div>
+        </form>
+
+        <table class="table table-hover table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>攻击时间</th>
+                    <th>攻击类型</th>
+                    <th>源IP</th>
+                    <th>目标IP</th>
+                    <th>目标端口</th>
+                    <th>严重程度</th>
+                    <th>状态</th>
+                    <th>处理人</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% if attacks.items %}
+            {% for a in attacks.items %}
+            <tr>
+                <td>{{ a.id }}</td>
+                <td>{{ a.attack_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ a.attack_type }}</td>
+                <td><code>{{ a.source_ip }}</code></td>
+                <td><code>{{ a.target_ip }}</code></td>
+                <td>{{ a.target_port or '-' }}</td>
+                <td>
+                    {% set sev_class = {'低危': 'severity-low', '中危': 'severity-medium', '高危': 'severity-high', '严重': 'severity-critical'} %}
+                    <span class="badge {{ sev_class.get(a.severity, '') }}">{{ a.severity }}</span>
+                </td>
+                <td>
+                    {% set st_class = {'未处理': 'status-pending', '处理中': 'status-processing', '已处理': 'status-resolved', '误报': 'status-false-positive'} %}
+                    <span class="badge {{ st_class.get(a.status, '') }}">{{ a.status }}</span>
+                </td>
+                <td>{{ a.handler or '-' }}</td>
+                <td nowrap>
+                    <a href="{{ url_for('attacks.attack_edit', attack_id=a.id) }}" class="btn btn-sm btn-outline-primary" title="编辑">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form method="POST" action="{{ url_for('attacks.attack_delete', attack_id=a.id) }}" style="display:inline;"
+                          onsubmit="return confirm('确定删除该攻击事件记录吗?');">
+                        <button class="btn btn-sm btn-outline-danger" title="删除"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr><td colspan="10" class="text-center text-muted py-4">暂无攻击事件记录</td></tr>
+            {% endif %}
+            </tbody>
+        </table>
+
+        <nav>
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if attacks.has_prev %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('attacks.attack_list', page=attacks.prev_num, severity=severity, status=status, keyword=keyword) }}">上一页</a></li>
+                {% endif %}
+                {% for p in attacks.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == attacks.page }}"><a class="page-link" href="{{ url_for('attacks.attack_list', page=p, severity=severity, status=status, keyword=keyword) }}">{{ p }}</a></li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if attacks.has_next %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('attacks.attack_list', page=attacks.next_num, severity=severity, status=status, keyword=keyword) }}">下一页</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+{% endblock %}

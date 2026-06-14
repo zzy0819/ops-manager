@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}IP扫描 - 运维管理系统{% endblock %}
+{% block page_title %}IP扫描{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0"><i class="bi bi-search me-2"></i>内网IP存活扫描</h2>
+</div>
+
+<div class="row">
+    <!-- 扫描表单 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-play-circle me-2"></i>开始扫描</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="subnet" class="form-label">目标网段</label>
+                        <input type="text" class="form-control" id="subnet" name="subnet" 
+                               placeholder="例如: 192.168.1.0/24, 10.0.0.0/16" required>
+                        <div class="form-text">
+                            支持 CIDR 格式，建议扫描 /24 或更小的子网（最多 256 个 IP）
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-play-fill me-1"></i>开始扫描
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 使用说明 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>使用说明</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>使用 ICMP ping 检测 IP 存活</li>
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>200 线程并发扫描，/24 网段约 2~3 秒完成</li>
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>扫描结果自动保存为文本文件</li>
+                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>支持 IPv4 网段扫描</li>
+                    <li><i class="bi bi-check-circle text-success me-2"></i>支持最大 /22 网段（1024 个 IP）</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 历史记录 -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>最近扫描记录</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if history %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>扫描时间</th>
+                        <th>目标网段</th>
+                        <th>IP总数</th>
+                        <th>存活数</th>
+                        <th>耗时(秒)</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for scan in history %}
+                    <tr>
+                        <td>{{ scan.scan_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td><code>{{ scan.subnet }}</code></td>
+                        <td>{{ scan.total_ips }}</td>
+                        <td>
+                            {% if scan.alive_ips > 0 %}
+                            <span class="badge bg-success">{{ scan.alive_ips }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if scan.scan_duration > 0 %}
+                            {{ "%.2f"|format(scan.scan_duration) }}
+                            {% else %}
+                            <span class="text-muted">扫描中...</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if scan.result_file %}
+                            <span class="badge bg-success">已完成</span>
+                            {% else %}
+                            <span class="badge bg-warning">扫描中</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if scan.result_file %}
+                            <a href="{{ url_for('ip_scan.ip_scan_results', scan_id=scan.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> 查看
+                            </a>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-secondary" disabled>
+                                <i class="bi bi-hourglass-split"></i> 等待
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-search display-6"></i>
+            <p class="mt-2">暂无扫描记录</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

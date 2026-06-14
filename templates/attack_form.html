@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}{{ '编辑攻击事件' if attack else '新增攻击事件' }}{% endblock %}
+{% block page_title %}{{ '编辑攻击事件' if attack else '新增攻击事件' }}{% endblock %}
+{% block content %}
+
+<h2 class="mb-3">
+    <i class="bi bi-shield-exclamation text-danger"></i>
+    {{ '编辑攻击事件' if attack else '新增攻击事件' }}
+</h2>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">攻击时间 <span class="text-danger">*</span></label>
+                    <input type="datetime-local" name="attack_time" class="form-control" required
+                           value="{{ attack.attack_time.strftime('%Y-%m-%dT%H:%M') if attack else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">攻击类型 <span class="text-danger">*</span></label>
+                    <select name="attack_type" class="form-select" required>
+                        {% for t in type_list %}
+                        <option value="{{ t }}" {% if attack and attack.attack_type == t %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">严重程度 <span class="text-danger">*</span></label>
+                    <select name="severity" class="form-select" required>
+                        {% for s in severity_list %}
+                        <option value="{{ s }}" {% if attack and attack.severity == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">源IP <span class="text-danger">*</span></label>
+                    <input type="text" name="source_ip" class="form-control" placeholder="192.168.1.100" required
+                           value="{{ attack.source_ip if attack else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">目标IP <span class="text-danger">*</span></label>
+                    <input type="text" name="target_ip" class="form-control" placeholder="10.0.0.1" required
+                           value="{{ attack.target_ip if attack else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">目标端口</label>
+                    <input type="number" name="target_port" class="form-control" placeholder="80" min="1" max="65535"
+                           value="{{ attack.target_port if attack else '' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">状态</label>
+                    <select name="status" class="form-select">
+                        {% for s in status_list %}
+                        <option value="{{ s }}" {% if attack and attack.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">处理人</label>
+                    <input type="text" name="handler" class="form-control" placeholder="张三"
+                           value="{{ attack.handler if attack else '' }}">
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">详细描述</label>
+                    <textarea name="description" class="form-control" rows="4" placeholder="攻击行为的详细描述...">{{ attack.description if attack else '' }}</textarea>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> {{ '更新' if attack else '保存' }}
+                    </button>
+                    <a href="{{ url_for('attacks.attack_list') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-lg"></i> 取消
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

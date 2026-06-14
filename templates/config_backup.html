@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block page_title %}设备配置备份{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-hdd-stack me-2"></i>交换机配置批量备份</h5>
+                <span class="badge bg-primary">华三交换机</span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <form method="GET" class="d-flex">
+                            <input type="text" name="keyword" class="form-control me-2"
+                                   placeholder="搜索设备名称或IP" value="{{ keyword }}">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button class="btn btn-primary" id="startBackup">
+                            <i class="bi bi-play-circle me-2"></i>开始备份
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 全局凭据（可选） -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-key me-2"></i>全局凭据（可选）</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="useGlobalCreds">
+                            <label class="form-check-label" for="useGlobalCreds">
+                                对所有选中设备使用统一凭据（覆盖设备自身配置）
+                            </label>
+                        </div>
+                        <div id="globalCreds" style="display:none">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">协议</label>
+                                    <select class="form-select" id="globalProtocol">
+                                        <option value="ssh">SSH</option>
+                                        <option value="telnet">Telnet</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">端口</label>
+                                    <input type="number" class="form-control" id="globalPort" value="22">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">用户名</label>
+                                    <input type="text" class="form-control" id="globalUsername">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">密码</label>
+                                    <input type="password" class="form-control" id="globalPassword">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设备列表 -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="selectAll"></th>
+                                <th>设备名称</th>
+                                <th>IP地址</th>
+                                <th>协议/端口</th>
+                                <th>凭据状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for device in devices.items %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="device-check" data-id="{{ device.id }}">
+                                </td>
+                                <td>{{ device.device_name }}</td>
+                                <td>{{ device.ip_address or '—' }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if device.mgmt_protocol == 'ssh' else 'info' }}">
+                                        {{ device.mgmt_protocol|upper }}
+                                    </span>
+                                    / {{ device.mgmt_port }}
+                                </td>
+                                <td>
+                                    {% if device.mgmt_username and device.mgmt_password %}
+                                    <span class="badge bg-success">已配置</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">未配置</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('devices.device_edit', device_id=device.id) }}"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i> 编辑
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox"></i> 暂无交换机设备
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 分页 -->
+                {% if devices.pages > 1 %}
+                <nav aria-label="分页">
+                    <ul class="pagination justify-content-center">
+                        {% if devices.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('config_backup.backup_page', page=devices.prev_num, keyword=keyword) }}">上一页</a>
+                        </li>
+                        {% endif %}
+                        {% for page_num in devices.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                <li class="page-item {{ 'active' if page_num == devices.page }}">
+                                    <a class="page-link" href="{{ url_for('config_backup.backup_page', page=page_num, keyword=keyword) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if devices.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('config_backup.backup_page', page=devices.next_num, keyword=keyword) }}">下一页</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 结果面板 -->
+        <div class="card shadow-sm mt-4" id="resultPanel" style="display:none">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>备份结果</h5>
+            </div>
+            <div class="card-body">
+                <div id="resultList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 全选/反选
+    $('#selectAll').change(function() {
+        $('.device-check').prop('checked', $(this).prop('checked'));
+    });
+
+    // 全局凭据显示/隐藏
+    $('#useGlobalCreds').change(function() {
+        if ($(this).prop('checked')) {
+            $('#globalCreds').slideDown();
+        } else {
+            $('#globalCreds').slideUp();
+        }
+    });
+
+    // 开始备份
+    $('#startBackup').click(function() {
+        const checked = $('.device-check:checked');
+        if (checked.length === 0) {
+            alert('请至少选择一台设备');
+            return;
+        }
+
+        const deviceIds = checked.map(function() {
+            return $(this).data('id');
+        }).get();
+
+        const useGlobal = $('#useGlobalCreds').prop('checked');
+        const data = {
+            device_ids: deviceIds,
+            use_global_creds: useGlobal
+        };
+        if (useGlobal) {
+            data.protocol = $('#globalProtocol').val();
+            data.port = $('#globalPort').val();
+            data.username = $('#globalUsername').val();
+            data.password = $('#globalPassword').val();
+        }
+
+        // 禁用按钮
+        const btn = $(this);
+        btn.prop('disabled', true).html('<i class="bi bi-hourglass-split me-2"></i>备份中...');
+
+        $.ajax({
+            url: '{{ url_for("config_backup.backup_execute") }}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(resp) {
+                if (resp.success) {
+                    showResults(resp.results);
+                } else {
+                    alert('备份失败: ' + resp.message);
+                }
+            },
+            error: function(xhr) {
+                alert('网络错误: ' + xhr.statusText);
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="bi bi-play-circle me-2"></i>开始备份');
+            }
+        });
+    });
+
+    function showResults(results) {
+        let html = '';
+        results.forEach(r => {
+            const icon = r.success ? 'bi-check-circle text-success' : 'bi-x-circle text-danger';
+            const badge = r.success ? '<span class="badge bg-success">成功</span>' : '<span class="badge bg-danger">失败</span>';
+            html += `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi ${icon} me-2"></i>
+                            <strong>${r.name}</strong> (${r.ip} - ${r.protocol})
+                        </div>
+                        ${badge}
+                    </div>
+                    <div class="mt-2 p-2 bg-light rounded small" style="max-height: 150px; overflow-y: auto; font-family: monospace">
+                        ${r.output.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            `;
+        });
+        $('#resultList').html(html);
+        $('#resultPanel').slideDown();
+    }
+});
+</script>
+{% endblock %}

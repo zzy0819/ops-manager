@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% block title %}中控大屏{% endblock %}
+{% block page_title %}中控大屏{% endblock %}
+{% block content %}
+<style>
+    .dashboard-wrapper {
+        margin: -24px -28px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        color: white;
+        min-height: calc(100vh - 57px);
+        padding: 24px 28px;
+    }
+    .dashboard-header {
+        text-align: center;
+        margin-bottom: 28px;
+        padding: 24px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .dashboard-header h1 {
+        font-size: 2.2rem;
+        margin-bottom: 6px;
+    }
+    .dashboard-header .time {
+        font-size: 1.2rem;
+        opacity: 0.7;
+    }
+    .dash-stat-card {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 28px 20px;
+        margin-bottom: 20px;
+        text-align: center;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: transform 0.3s, background 0.3s;
+    }
+    .dash-stat-card:hover {
+        transform: translateY(-4px);
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .dash-stat-card i { font-size: 2.8rem; margin-bottom: 12px; }
+    .dash-stat-card h3 { font-size: 2.5rem; margin: 8px 0; font-weight: 700; }
+    .dash-stat-card p { font-size: 0.95rem; opacity: 0.75; margin: 0; }
+    .chart-container {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 20px;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        height: 320px;
+    }
+    .chart-title {
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+        text-align: center;
+        opacity: 0.85;
+        font-weight: 600;
+    }
+    .recent-list {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 20px;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        height: 320px;
+        overflow-y: auto;
+    }
+    .recent-list h4 { margin-bottom: 14px; text-align: center; opacity: 0.85; }
+    .list-item {
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        border-left: 4px solid;
+        font-size: 0.88rem;
+    }
+    .list-item-attack { border-left-color: #ff6b6b; }
+    .list-item-config { border-left-color: #4dabf7; }
+    .list-item-ticket { border-left-color: #ffd43b; }
+    .dashboard-footer {
+        text-align: center;
+        margin-top: 24px;
+        padding: 16px;
+        opacity: 0.55;
+        font-size: 0.85rem;
+    }
+</style>
+
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <h1><i class="bi bi-speedometer2"></i> 运维管理中控大屏</h1>
+        <div class="time" id="current-time"></div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="dash-stat-card">
+                <i class="bi bi-shield-exclamation text-danger"></i>
+                <h3>{{ stats.attack_count }}</h3>
+                <p>攻击事件总数</p>
+                <div class="mt-2"><span class="badge bg-danger">今日 {{ stats.today_attacks }} 起</span></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dash-stat-card">
+                <i class="bi bi-gear text-primary"></i>
+                <h3>{{ stats.config_count }}</h3>
+                <p>配置变更总数</p>
+                <div class="mt-2"><span class="badge bg-primary">今日 {{ stats.today_configs }} 次</span></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dash-stat-card">
+                <i class="bi bi-ticket-detailed text-warning"></i>
+                <h3>{{ stats.ticket_count }}</h3>
+                <p>工单总数</p>
+                <div class="mt-2"><span class="badge bg-warning text-dark">待处理 {{ stats.pending_tickets }} 个</span></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dash-stat-card">
+                <i class="bi bi-activity text-success"></i>
+                <h3>{{ stats.resolution_rate }}%</h3>
+                <p>工单解决率</p>
+                <div class="mt-2"><span class="badge bg-success">平均处理 {{ stats.avg_resolution_hours|round(1) }} 小时</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="chart-container">
+                <div class="chart-title">攻击事件严重程度分布</div>
+                <div id="attack-severity-chart" style="height: 250px;"></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="chart-container">
+                <div class="chart-title">工单状态分布</div>
+                <div id="ticket-status-chart" style="height: 250px;"></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="chart-container">
+                <div class="chart-title">配置变更类型分布</div>
+                <div id="config-type-chart" style="height: 250px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="recent-list">
+                <h4><i class="bi bi-shield-exclamation text-danger"></i> 最近攻击事件</h4>
+                {% if recent_attacks %}
+                {% for a in recent_attacks %}
+                <div class="list-item list-item-attack">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ a.attack_type }}</strong>
+                        <small>{{ a.attack_time.strftime('%H:%M') }}</small>
+                    </div>
+                    <div class="small">
+                        {{ a.source_ip }} → {{ a.target_ip }}
+                        <span class="badge {{ 'bg-danger' if a.severity in ['高危','严重'] else 'bg-warning text-dark' if a.severity == '中危' else 'bg-success' }}">{{ a.severity }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-center text-muted">暂无攻击事件</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="recent-list">
+                <h4><i class="bi bi-gear text-primary"></i> 最近配置变更</h4>
+                {% if recent_configs %}
+                {% for c in recent_configs %}
+                <div class="list-item list-item-config">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ c.device_name }}</strong>
+                        <small>{{ c.change_time.strftime('%H:%M') }}</small>
+                    </div>
+                    <div class="small">
+                        {{ c.config_type }}
+                        <span class="badge {{ 'bg-success' if c.change_status == '成功' else 'bg-danger' }}">{{ c.change_status }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-center text-muted">暂无配置变更</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="recent-list">
+                <h4><i class="bi bi-ticket-detailed text-warning"></i> 最近工单</h4>
+                {% if recent_tickets %}
+                {% for t in recent_tickets %}
+                <div class="list-item list-item-ticket">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ t.requester }}</strong>
+                        <small>{{ t.create_time.strftime('%H:%M') }}</small>
+                    </div>
+                    <div class="small">
+                        {{ t.problem_type }}
+                        <span class="badge {{ 'bg-danger' if t.priority == '紧急' else 'bg-warning text-dark' if t.priority == '高' else 'bg-primary' if t.priority == '中' else 'bg-success' }}">{{ t.priority }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-center text-muted">暂无工单</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="chart-container">
+                <div class="chart-title">近7天活动趋势</div>
+                <div id="trend-chart" style="height: 250px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-footer">
+        <p>数据更新时间: <span id="update-time">{{ now.strftime('%Y-%m-%d %H:%M:%S') }}</span> | 系统运行正常</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script>
+    function updateTime() {
+        var now = new Date();
+        document.getElementById('current-time').textContent = now.toLocaleString('zh-CN', {
+            year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
+        });
+    }
+    updateTime(); setInterval(updateTime, 1000);
+
+    var chartOpts = {responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'white'}}}};
+
+    new Chart(document.getElementById('attack-severity-chart'), {
+        type:'doughnut',
+        data:{labels:{{ attack_severity_labels|tojson }},datasets:[{data:{{ attack_severity_data|tojson }},backgroundColor:['#28a745','#ffc107','#fd7e14','#dc3545']}]},
+        options:chartOpts
+    });
+    new Chart(document.getElementById('ticket-status-chart'), {
+        type:'pie',
+        data:{labels:{{ ticket_status_labels|tojson }},datasets:[{data:{{ ticket_status_data|tojson }},backgroundColor:['#6c757d','#17a2b8','#28a745','#343a40','#e9ecef']}]},
+        options:chartOpts
+    });
+    new Chart(document.getElementById('config-type-chart'), {
+        type:'bar',
+        data:{labels:{{ config_type_labels|tojson }},datasets:[{label:'变更次数',data:{{ config_type_data|tojson }},backgroundColor:'rgba(77,171,247,0.6)',borderColor:'#4dabf7',borderWidth:1}]},
+        options:Object.assign({},chartOpts,{scales:{y:{beginAtZero:true,ticks:{color:'white'},grid:{color:'rgba(255,255,255,0.1)'}},x:{ticks:{color:'white'},grid:{color:'rgba(255,255,255,0.1)'}}}})
+    });
+    new Chart(document.getElementById('trend-chart'), {
+        type:'line',
+        data:{labels:{{ trend_labels|tojson }},datasets:[
+            {label:'攻击事件',data:{{ trend_attack_data|tojson }},borderColor:'#ff6b6b',backgroundColor:'rgba(255,107,107,0.1)',tension:0.3},
+            {label:'配置变更',data:{{ trend_config_data|tojson }},borderColor:'#4dabf7',backgroundColor:'rgba(77,171,247,0.1)',tension:0.3},
+            {label:'工单',data:{{ trend_ticket_data|tojson }},borderColor:'#ffd43b',backgroundColor:'rgba(255,212,59,0.1)',tension:0.3}
+        ]},
+        options:Object.assign({},chartOpts,{scales:{y:{beginAtZero:true,ticks:{color:'white'},grid:{color:'rgba(255,255,255,0.1)'}},x:{ticks:{color:'white'},grid:{color:'rgba(255,255,255,0.1)'}}}})
+    });
+
+    setTimeout(function(){window.location.reload();},30000);
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+*.whl
+dist/
+build/
+*.spec
+*.pyz
+
+# 数据库文件（包含敏感数据）
+*.db
+*.sqlite
+*.sqlite3
+
+# 扫描结果（临时文件）
+scans/*.txt
+
+# 缓存
+cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 操作系统
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 日志
+*.log
+
+# 备份文件
+*.bak

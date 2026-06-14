@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}配置变更{% endblock %}
+{% block page_title %}配置变更{% endblock %}
+{% block content %}
+
+<h2 class="mb-3"><i class="bi bi-gear text-primary"></i> 网络配置变更记录</h2>
+
+<div class="d-flex justify-content-end mb-3">
+    <a href="{{ url_for('configs.config_create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> 新增配置变更
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form class="row g-3 mb-3" method="GET">
+            <div class="col-md-2">
+                <select name="config_type" class="form-select form-select-sm">
+                    <option value="">全部类型</option>
+                    {% for t in config_type_list %}
+                    <option value="{{ t }}" {% if config_type == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部状态</option>
+                    {% for s in status_list %}
+                    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" name="keyword" class="form-control form-control-sm" placeholder="搜索设备名 / IP / 操作人 / 变更内容" value="{{ keyword }}">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i> 搜索</button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('configs.config_create') }}" class="btn btn-sm btn-success w-100"><i class="bi bi-plus-lg"></i> 新增记录</a>
+            </div>
+        </form>
+
+        <table class="table table-hover table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>变更时间</th>
+                    <th>设备名称</th>
+                    <th>设备IP</th>
+                    <th>配置类型</th>
+                    <th>变更内容</th>
+                    <th>操作人</th>
+                    <th>是否回滚</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% if configs.items %}
+            {% for c in configs.items %}
+            <tr>
+                <td>{{ c.id }}</td>
+                <td>{{ c.change_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ c.device_name }}</td>
+                <td><code>{{ c.device_ip }}</code></td>
+                <td><span class="badge bg-info">{{ c.config_type }}</span></td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                    title="{{ c.change_content }}">{{ c.change_content }}</td>
+                <td>{{ c.operator }}</td>
+                <td>
+                    {% if c.is_rollback %}
+                    <span class="badge bg-warning text-dark">是</span>
+                    {% else %}
+                    <span class="badge bg-secondary">否</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge {{ 'bg-success' if c.change_status == '成功' else ('bg-danger' if c.change_status == '失败' else 'bg-warning text-dark') }}">
+                        {{ c.change_status }}
+                    </span>
+                </td>
+                <td nowrap>
+                    <a href="{{ url_for('configs.config_edit', config_id=c.id) }}" class="btn btn-sm btn-outline-primary" title="编辑">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form method="POST" action="{{ url_for('configs.config_delete', config_id=c.id) }}" style="display:inline;"
+                          onsubmit="return confirm('确定删除该配置变更记录吗?');">
+                        <button class="btn btn-sm btn-outline-danger" title="删除"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr><td colspan="10" class="text-center text-muted py-4">暂无配置变更记录</td></tr>
+            {% endif %}
+            </tbody>
+        </table>
+
+        <nav>
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if configs.has_prev %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('configs.config_list', page=configs.prev_num, status=status, config_type=config_type, keyword=keyword) }}">上一页</a></li>
+                {% endif %}
+                {% for p in configs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == configs.page }}"><a class="page-link" href="{{ url_for('configs.config_list', page=p, status=status, config_type=config_type, keyword=keyword) }}">{{ p }}</a></li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if configs.has_next %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('configs.config_list', page=configs.next_num, status=status, config_type=config_type, keyword=keyword) }}">下一页</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+{% endblock %}

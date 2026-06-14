@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运维管理系统 - {% block title %}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <style>
+        :root {
+            --sidebar-width: 240px;
+            --sidebar-bg: #1e1e2d;
+            --sidebar-hover: #2a2a3d;
+            --sidebar-active: #3a3a5c;
+            --sidebar-accent: #667eea;
+            --sidebar-text: #a2a3b7;
+            --sidebar-text-light: #cdd0e0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: #f4f5f8;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--sidebar-bg);
+            color: #fff;
+            z-index: 1040;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: transform 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 18px 20px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.15);
+        }
+        .sidebar-brand i { font-size: 1.4rem; color: var(--sidebar-accent); }
+
+        .sidebar-section {
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .sidebar-section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            color: var(--sidebar-text-light);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .sidebar-section-title:hover { background: var(--sidebar-hover); color: #fff; }
+        .sidebar-section-title i.bi-chevron-down { font-size: 0.7rem; transition: transform 0.25s; color: var(--sidebar-text); }
+        .sidebar-section-title.collapsed i.bi-chevron-down { transform: rotate(-90deg); }
+
+        .sidebar-nav { padding: 0; margin: 0; list-style: none; }
+        .sidebar-nav .collapse { border-top: 1px solid rgba(255,255,255,0.04); }
+        .sidebar-nav .collapse.show { }
+
+        .sidebar-nav .nav-item { }
+        .sidebar-nav .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px 10px 36px;
+            color: var(--sidebar-text);
+            font-size: 0.88rem;
+            text-decoration: none;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-nav .nav-link:hover {
+            background: var(--sidebar-hover);
+            color: #fff;
+        }
+        .sidebar-nav .nav-link.active {
+            background: var(--sidebar-active);
+            color: #fff;
+            border-left-color: var(--sidebar-accent);
+        }
+        .sidebar-nav .nav-link i { font-size: 0.9rem; width: 18px; text-align: center; }
+
+        /* single top-level link (no submenu) */
+        .sidebar-link-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            color: var(--sidebar-text-light);
+            font-size: 0.88rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
+        .sidebar-link-top:hover { background: var(--sidebar-hover); color: #fff; }
+        .sidebar-link-top.active { background: var(--sidebar-active); color: #fff; border-left-color: var(--sidebar-accent); }
+        .sidebar-link-top i { font-size: 1rem; width: 20px; text-align: center; }
+        .sidebar-badge {
+            margin-left: auto;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: var(--sidebar-accent);
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 14px 20px;
+            font-size: 0.75rem;
+            color: #5a5a72;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            padding: 0;
+        }
+        .main-header {
+            background: #fff;
+            padding: 14px 28px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+        .main-header .page-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #333;
+        }
+        .main-body {
+            padding: 24px 28px;
+        }
+
+        /* Cards */
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            margin-bottom: 20px;
+            border: 1px solid #e8ecf0;
+        }
+        .card-header {
+            border-radius: 10px 10px 0 0 !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Stats */
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,.07);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #eef0f4;
+        }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 6px 18px rgba(0,0,0,.1); }
+        .stat-card i { font-size: 2.3rem; margin-bottom: 8px; }
+        .stat-card h3 { font-size: 1.6rem; margin-bottom: 2px; }
+
+        /* Tables */
+        .table { margin-bottom: 0; }
+        .table th { background-color: #f8f9fb; border-bottom: 2px solid #e0e4e8; font-size: 0.82rem; text-transform: uppercase; color: #6c757d; }
+        .table td { vertical-align: middle; }
+
+        /* Badges */
+        .badge { font-size: 0.78em; padding: 5px 10px; font-weight: 500; }
+        .severity-low { background-color: #28a745; }
+        .severity-medium { background-color: #ffc107; color: #212529; }
+        .severity-high { background-color: #fd7e14; }
+        .severity-critical { background-color: #dc3545; }
+        .status-pending { background-color: #6c757d; }
+        .status-processing { background-color: #17a2b8; }
+        .status-resolved { background-color: #28a745; }
+        .status-false-positive { background-color: #6f42c1; }
+
+        /* Mobile toggle */
+        .sidebar-toggler {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #555;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .sidebar-toggler { display: inline-block; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+    <a href="{{ url_for('main.index') }}" class="sidebar-brand">
+        <i class="bi bi-shield-check"></i> 运维管理系统
+    </a>
+
+    <!-- 概览 -->
+    <a href="{{ url_for('main.index') }}" class="sidebar-link-top {{ 'active' if request.endpoint == 'main.index' }}">
+        <i class="bi bi-speedometer2"></i> 首页概览
+    </a>
+    <a href="{{ url_for('main.dashboard') }}" class="sidebar-link-top {{ 'active' if request.endpoint == 'main.dashboard' }}">
+        <i class="bi bi-display"></i> 中控大屏
+        <span class="sidebar-badge">NEW</span>
+    </a>
+
+    <!-- 安全事件 -->
+    <a href="{{ url_for('attacks.attack_list') }}" class="sidebar-link-top {{ 'active' if request.endpoint in ['attacks.attack_list','attacks.attack_create','attacks.attack_edit'] }}">
+        <i class="bi bi-shield-exclamation"></i> 安全事件
+    </a>
+
+    <!-- 配置变更 -->
+    <a href="{{ url_for('configs.config_list') }}" class="sidebar-link-top {{ 'active' if request.endpoint in ['configs.config_list','configs.config_create','configs.config_edit'] }}">
+        <i class="bi bi-gear"></i> 配置变更
+    </a>
+
+    <!-- 工单管理 -->
+    <a href="{{ url_for('tickets.ticket_list') }}" class="sidebar-link-top {{ 'active' if request.endpoint in ['tickets.ticket_list','tickets.ticket_create','tickets.ticket_edit'] }}">
+        <i class="bi bi-ticket-detailed"></i> 工单管理
+    </a>
+
+    <!-- 设备台账 -->
+    <a href="{{ url_for('devices.device_list') }}" class="sidebar-link-top {{ 'active' if request.endpoint in ['devices.device_list','devices.device_create','devices.device_edit'] }}">
+        <i class="bi bi-hdd-stack"></i> 设备台账
+    </a>
+
+    <!-- 安全事件中心 -->
+    <a href="{{ url_for('security.security_center') }}" class="sidebar-link-top {{ 'active' if request.endpoint == 'security.security_center' }}">
+        <i class="bi bi-globe2"></i> 安全事件中心
+        <span class="sidebar-badge">HOT</span>
+    </a>
+
+    <!-- 报告中心 -->
+    <div class="sidebar-section">
+        <button class="sidebar-section-title {{ 'collapsed' if request.endpoint not in ['reports.reports'] }}"
+                data-bs-toggle="collapse" data-bs-target="#navReports" aria-expanded="{{ 'true' if request.endpoint == 'reports.reports' else 'false' }}">
+            <span><i class="bi bi-file-earmark-bar-graph me-2"></i>报告中心</span>
+            <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="collapse {{ 'show' if request.endpoint == 'reports.reports' }}" id="navReports">
+            <ul class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="{{ url_for('reports.reports') }}" class="nav-link {{ 'active' if request.endpoint == 'reports.reports' }}">
+                        <i class="bi bi-graph-up"></i> 周报/月报
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 系统工具 -->
+    <div class="sidebar-section">
+        <button class="sidebar-section-title {{ 'collapsed' if request.endpoint not in ['ip_scan.ip_scan','ip_scan.ip_scan_results','quick_access.quick_access','quick_access.quick_create','quick_access.quick_edit','config_backup.backup_page'] }}"
+                data-bs-toggle="collapse" data-bs-target="#navTools" aria-expanded="{{ 'true' if request.endpoint in ['ip_scan.ip_scan','ip_scan.ip_scan_results','quick_access.quick_access','quick_access.quick_create','quick_access.quick_edit'] else 'false' }}">
+            <span><i class="bi bi-tools me-2"></i>系统工具</span>
+            <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="collapse {{ 'show' if request.endpoint in ['ip_scan.ip_scan','ip_scan.ip_scan_results','quick_access.quick_access','quick_access.quick_create','quick_access.quick_edit','config_backup.backup_page'] }}" id="navTools">
+            <ul class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="{{ url_for('ip_scan.ip_scan') }}" class="nav-link {{ 'active' if request.endpoint == 'ip_scan.ip_scan' }}">
+                        <i class="bi bi-search"></i> IP 扫描
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('quick_access.quick_access') }}" class="nav-link {{ 'active' if request.endpoint == 'quick_access.quick_access' }}">
+                        <i class="bi bi-link-45deg"></i> 快捷导航
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('config_backup.backup_page') }}" class="nav-link {{ 'active' if request.endpoint == 'config_backup.backup_page' }}">
+                        <i class="bi bi-arrow-repeat"></i> 配置备份
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="sidebar-footer">运维管理系统 v1.0</div>
+</aside>
+
+<!-- Main Content -->
+<div class="main-content">
+    <header class="main-header">
+        <div class="d-flex align-items-center gap-3">
+            <button class="sidebar-toggler" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                <i class="bi bi-list"></i>
+            </button>
+            <span class="page-title">{% block page_title %}{% endblock %}</span>
+        </div>
+        <span class="text-muted" style="font-size:0.85rem" id="headerClock"></span>
+    </header>
+
+    <div class="main-body">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// 实时时钟
+(function updateClock() {
+    var now = new Date();
+    document.getElementById('headerClock').textContent =
+        now.getFullYear() + '-' +
+        String(now.getMonth()+1).padStart(2,'0') + '-' +
+        String(now.getDate()).padStart(2,'0') + ' ' +
+        String(now.getHours()).padStart(2,'0') + ':' +
+        String(now.getMinutes()).padStart(2,'0') + ':' +
+        String(now.getSeconds()).padStart(2,'0');
+    setTimeout(updateClock, 1000);
+})();
+
+// 点击 sidebar 链接后，移动端自动收起
+document.querySelectorAll('.sidebar .nav-link, .sidebar-link-top').forEach(function(el) {
+    el.addEventListener('click', function() {
+        if (window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.remove('open');
+        }
+    });
+});
+</script>
+{% block scripts %}{% endblock %}
+{% block extra_js %}{% endblock %}
+</body>
+</html>
