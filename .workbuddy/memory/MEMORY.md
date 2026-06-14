@@ -2,7 +2,7 @@
 
 ## 项目概况
 - 项目名称：运维管理系统 (Ops Manager)
-- 当前版本：V1.3
+- 当前版本：V1.5
 - 技术栈：Python Flask + SQLAlchemy + SQLite + Bootstrap 5 + Chart.js
 - 项目路径：C:\Users\22706\AppData\Roaming\Tencent\Marvis\User\oAN1i2aU4E_KYnCUugqzcgwbhcyQ\workspace\conv_19e54247999_cbf34ffe0703\output\ops_manager
 
@@ -21,8 +21,8 @@
 - 禁止在项目根目录下创建 docs/、overview.md 等文件
 - 禁止将团队产出（PRD、架构文档、集成方案等）放到项目源码目录
 
-## V1.3 已有功能
-10个功能模块：攻击事件管理、配置变更管理、桌面运维工单、设备台账、快捷导航、IP存活扫描、中控大屏、首页概览、周报月报、安全事件中心
+## V1.5 已有功能
+14个功能模块：攻击事件管理、配置变更管理、桌面运维工单、设备台账、快捷导航、IP存活扫描、中控大屏、首页概览、周报月报、安全事件中心、网络连通性诊断
 
 ## V2.0 需求规划（2026-05-24 产品经理许清楚提出）
 10个新需求，按优先级：

@@ -195,7 +195,7 @@ def api_docs_ui():
             <div class="endpoint"><span class="method get">GET</span><span class="path">/monitor/metrics</span><p class="desc">性能指标</p></div>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/monitor/info</span><p class="desc">应用信息</p></div>
 
-            <footer>运维管理系统 V1.3 &mdash; API 文档自动生成</footer>
+            <footer>运维管理系统 V1.5 &mdash; API 文档自动生成</footer>
         </div>
     </body>
     </html>

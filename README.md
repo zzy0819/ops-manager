@@ -1,10 +1,10 @@
-# 运维管理系统 (Ops Manager)
+# 运维管理系统 (Ops Manager) V1.5
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.0%2B-green)](https://flask.palletsprojects.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> 一款面向企业网络运维的综合管理平台，采用深信服科技风格 UI 设计，支持攻击事件管理、配置变更追踪、桌面运维工单、设备台账、IP 存活扫描等核心功能。
+> 一款面向企业网络运维的综合管理平台，采用深信服科技风格 UI 设计，支持攻击事件管理、配置变更追踪、桌面运维工单、设备台账、IP 存活扫描、网络连通性诊断等核心功能。
 
 ---
 
@@ -26,6 +26,7 @@
 | **快捷导航** | 常用系统链接管理，支持凭据记录 |
 | **配置备份** | 网络设备配置备份管理 |
 | **系统监控** | 服务器资源监控（CPU/内存/磁盘/网络） |
+| **网络诊断** | Ping / Traceroute / 端口探测 / DNS / 一键诊断 |
 
 ### UI 风格
 
@@ -95,6 +96,7 @@ ops-manager/
 │   │   ├── tickets.py      # 运维工单
 │   │   ├── devices.py      # 设备台账
 │   │   ├── ip_scan.py      # IP 扫描
+│   │   ├── diagnosis.py    # 网络诊断
 │   │   ├── reports.py      # 周报月报
 │   │   ├── security.py     # 安全事件中心
 │   │   ├── monitor.py      # 系统监控
@@ -151,6 +153,16 @@ SQLALCHEMY_DATABASE_URI = 'postgresql://user:password@localhost/ops_manager'
 | `/api/v1/configs/` | GET/POST | 配置变更列表/创建 |
 | `/api/v1/configs/<id>` | GET/PUT/DELETE | 配置变更详情/更新/删除 |
 
+### 诊断接口
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/diagnosis/ping` | POST | Ping 连通性测试 |
+| `/diagnosis/traceroute` | POST | 路由追踪 |
+| `/diagnosis/port_scan` | POST | 端口探测 |
+| `/diagnosis/dns` | POST | DNS 解析 |
+| `/diagnosis/full` | POST | 一键综合诊断 |
+
 ### 内部接口
 
 | 端点 | 说明 |
@@ -178,6 +190,25 @@ SQLALCHEMY_DATABASE_URI = 'postgresql://user:password@localhost/ops_manager'
 3. 使用生产级 WSGI 服务器（如 Gunicorn/uWSGI）
 4. 配置 HTTPS
 5. 完善用户认证机制（当前版本无登录验证）
+
+---
+
+## 更新日志
+
+### V1.5 (2026-06-14)
+- 深信服科技风格 UI 全面改版
+- IP 扫描记录支持删除和分页显示
+- 新增网络连通性诊断工具箱（Ping / Traceroute / 端口探测 / DNS / 一键诊断）
+- 新增项目 README 文档
+
+### V1.4 (2026-05-24)
+- P0 架构优化：路由层统一走服务层
+- 新增 MainService、QuickLinkService、MonitorService
+
+### V1.3 (2026-05-24)
+- 周报/月报 Tab 标签页重构
+- IP 扫描优化：200 线程并发
+- 修复 9 个 Bug
 
 ---
 
