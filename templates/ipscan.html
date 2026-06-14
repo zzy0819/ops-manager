@@ -96,15 +96,23 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if scan.result_file %}
-                            <a href="{{ url_for('ip_scan.ip_scan_results', scan_id=scan.id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> 查看
-                            </a>
-                            {% else %}
-                            <button class="btn btn-sm btn-outline-secondary" disabled>
-                                <i class="bi bi-hourglass-split"></i> 等待
-                            </button>
-                            {% endif %}
+                            <div class="d-flex gap-1">
+                                {% if scan.result_file %}
+                                <a href="{{ url_for('ip_scan.ip_scan_results', scan_id=scan.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> 查看
+                                </a>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-secondary" disabled>
+                                    <i class="bi bi-hourglass-split"></i> 等待
+                                </button>
+                                {% endif %}
+                                <form method="post" action="{{ url_for('ip_scan.ip_scan_delete', scan_id=scan.id) }}" class="d-inline"
+                                      onsubmit="return confirm('确定要删除这条扫描记录吗？');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i> 删除
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
