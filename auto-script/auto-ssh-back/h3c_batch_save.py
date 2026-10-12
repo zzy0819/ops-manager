@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 批量 SSH 登录华三(H3C/Comware)交换机并保存配置（增强健壮性版）
-s
+sx
 依赖:
     pip install netmiko openpyxl.
 x
