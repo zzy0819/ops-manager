@@ -4,7 +4,7 @@
 批量 SSH 登录华三(H3C/Comware)交换机并保存配置（增强健壮性版）
 
 依赖:
-    pip install netmiko openpyxl.
+    pip install netmiko openpyxl
 
 Excel 格式（第一行为表头，中英文列名均可）:
     IP | 用户名 | 密码 | 端口(可选,默认22) | 设备名称(可选) | super密码(可选)
