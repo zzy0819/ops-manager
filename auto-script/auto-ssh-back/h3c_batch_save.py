@@ -9,7 +9,7 @@ x
 Excel 格式（第一行为表头，中英文列名均可）:.
     IP | 用户名 | 密码 | 端口(可选,默认22) | 设备名称(可选) | super密码(可选)
     * 密码如果是纯数字，请把单元格设置为「文本」格式，否则 Excel 会吃掉前导 0。
-
+z
 用法:
     python h3c_batch_save.py --template                  # 生成模板
     python h3c_batch_save.py -f devices.xlsx --check-only  # 只校验端口+账号密码，不保存
