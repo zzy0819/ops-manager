@@ -82,7 +82,7 @@ python h3c_batch_save.py -f devices.xlsx -v
 
 ## 报告与日志
 
-- 每次运行生成 `save_config_YYYYMMDD_HHMMSS.log`（同时输出控制台与文件，paramiko 噪音已屏蔽）
+- 所有运行日志统一追加写入 `save_config.log`（同时输出控制台与文件，paramiko 噪音已屏蔽）。每次运行以分隔线 + 启动时间戳开头，便于在单文件中区分多次运行；结果报告仍为每次独立的 `save_config_result_YYYYMMDD_HHMMSS.xlsx`
 - 生成 `save_config_result_YYYYMMDD_HHMMSS.xlsx` 报告，字段：行号 / 设备名 / IP / 端口 / 提示符 / 结果 / 失败阶段 / 详情 / 耗时
 - 若 Excel 写入失败（文件被占用 / 无权限），自动降级为 CSV（utf-8-sig）
 

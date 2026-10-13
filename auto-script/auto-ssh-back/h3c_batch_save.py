@@ -536,15 +536,20 @@ def main() -> int:
     args.retries = max(0, min(args.retries, 5))
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # 所有运行日志统一追加写入 save_config.log，不再按时间戳分文件
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
-            logging.FileHandler(f"save_config_{stamp}.log", encoding="utf-8"),
+            logging.FileHandler("save_config.log", encoding="utf-8", delay=True),
             logging.StreamHandler(sys.stdout),
         ],
     )
     logging.getLogger("paramiko").setLevel(logging.CRITICAL)  # 屏蔽 paramiko 噪音
+    # 用分隔线 + 启动标记区分单次运行，便于在单日志文件中定位
+    log.info("=" * 64)
+    log.info("本次运行启动 @ %s | 报告: save_config_result_%s.xlsx",
+             datetime.now().strftime("%Y-%m-%d %H:%M:%S"), stamp)
     if args.legacy_ssh:
         enable_legacy_algorithms()
         log.info("已启用旧版 SSH 算法兼容（--legacy-ssh）")
