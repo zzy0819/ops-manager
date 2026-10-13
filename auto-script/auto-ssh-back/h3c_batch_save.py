@@ -4,16 +4,17 @@
 批量 SSH 登录华三(H3C/Comware)交换机并保存配置（增强健壮性版）
 
 依赖:
-    pip install netmiko openpyxl.
-x
-Excel 格式（第一行为表头，中英文列名均可）:.
+    pip install netmiko openpyxl
+
+Excel 格式（第一行为表头，中英文列名均可）:
     IP | 用户名 | 密码 | 端口(可选,默认22) | 设备名称(可选) | super密码(可选)
     * 密码如果是纯数字，请把单元格设置为「文本」格式，否则 Excel 会吃掉前导 0。
-z
+
 用法:
     python h3c_batch_save.py --template                  # 生成模板
     python h3c_batch_save.py -f devices.xlsx --check-only  # 只校验端口+账号密码，不保存
     python h3c_batch_save.py -f devices.xlsx             # 校验通过后保存配置
+    python h3c_batch_save.py -f devices.xlsx --backup    # 先把配置备份到 ./backup/*.cfg，再保存
     python h3c_batch_save.py -f devices.xlsx -w 10 -t 15 -r 2
 
 处理流程（每台设备）:
@@ -21,7 +22,7 @@ z
     2. 端口检测   : TCP 连通性 + 读取 SSH banner，确认确实是 SSH 服务
     3. 登录认证   : 认证失败【不重试】，避免触发设备账号锁定；网络类错误才重试
     4. 登录后校验 : 识别提示符、退出系统视图、检查是否 Comware 设备
-    5. 保存配置   : save force，并根据回显判断成功/失败/无法确认.
+    5. 保存配置   : save force，并根据回显判断成功/失败/无法确认
 退出码: 0=全部成功, 1=存在失败/未确认, 130=用户中断
 """
 from __future__ import annotations
@@ -33,13 +34,16 @@ import logging
 import re
 import socket
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 try:
+    import paramiko
     from netmiko import ConnectHandler
     from netmiko.exceptions import (
         NetmikoAuthenticationException,
@@ -80,6 +84,61 @@ SAVE_FAIL_KEYWORDS = (
     "not enough", "no space", "not permitted", "authorization failed",
 )
 SAVE_OK_KEYWORDS = ("successfully", "saved the current configuration", "save the configuration successfully")
+
+NEGOTIATION_MARKERS = (
+    "no acceptable", "incompatible ssh peer", "no matching",
+    "unable to negotiate", "no common",
+)
+
+_legacy_lock = threading.Lock()
+_legacy_enabled = False
+
+
+def is_negotiation_error(e: Exception) -> bool:
+    """是否为 SSH 算法协商失败（kex/cipher/mac/hostkey 与设备无交集）。"""
+    s = str(e).lower()
+    return any(k in s for k in NEGOTIATION_MARKERS)
+
+
+def _paramiko_major() -> int:
+    try:
+        return int(str(paramiko.__version__).split(".")[0])
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def enable_legacy_algorithms() -> bool:
+    """
+    给 paramiko 追加老设备常用的旧算法（追加在列表末尾，新设备仍优先协商强算法）。
+    包括 diffie-hellman-group1/14-sha1、group-exchange-sha1、CBC 类加密、ssh-rsa/ssh-dss。
+    返回 True 表示本次是首次启用。全局生效，线程安全，可重复调用。
+    """
+    global _legacy_enabled
+    with _legacy_lock:
+        if _legacy_enabled:
+            return False
+        T = paramiko.Transport
+        extras = {
+            "_preferred_kex": ("_kex_info", (
+                "diffie-hellman-group14-sha1",
+                "diffie-hellman-group-exchange-sha1",
+                "diffie-hellman-group1-sha1",
+            )),
+            "_preferred_ciphers": ("_cipher_info", (
+                "aes128-cbc", "aes192-cbc", "aes256-cbc", "3des-cbc",
+            )),
+            "_preferred_macs": ("_mac_info", ("hmac-sha1", "hmac-md5")),
+            "_preferred_keys": ("_key_info", ("ssh-rsa", "ssh-dss")),
+        }
+        for pref_attr, (info_attr, wanted) in extras.items():
+            cur = tuple(getattr(T, pref_attr, ()))
+            info = getattr(T, info_attr, {})
+            add = tuple(x for x in wanted if x in info and x not in cur)
+            if add:
+                setattr(T, pref_attr, cur + add)
+        _legacy_enabled = True
+        return True
+
 
 STATUS_OK, STATUS_CHECK_OK = "成功", "校验通过"
 STATUS_FAIL, STATUS_SKIP, STATUS_UNSURE = "失败", "跳过", "未确认"
@@ -256,18 +315,29 @@ def _connect(dev: Device, timeout: int, retries: int):
         # 不使用公钥/agent，只做账号密码认证，避免因本机密钥过多触发服务端限制
         use_keys=False, allow_agent=False,
     )
-    last = None
-    for attempt in range(1, retries + 2):
+    attempt = 0
+    tried_legacy = False
+    while True:
+        attempt += 1
         try:
             return ConnectHandler(**params)
         except NetmikoAuthenticationException:
             raise
-        except Exception as e:  # noqa: BLE001  网络/SSH 协商类错误
-            last = e
+        except Exception as e:  # noqa: BLE001
             log.debug("%s 第 %d 次登录失败: %s", dev.ip, attempt, e)
-            if attempt <= retries:
-                time.sleep(min(2 * attempt, 5))
-    raise last  # type: ignore[misc]
+            if is_negotiation_error(e):
+                # 算法协商失败：重试没有意义，只尝试一次启用旧算法后重连
+                if tried_legacy:
+                    raise
+                tried_legacy = True
+                if enable_legacy_algorithms():
+                    log.warning("检测到设备仅支持旧版 SSH 算法（%s），已启用兼容旧算法后重试。"
+                                "建议在设备上启用更安全的算法。", dev.ip)
+                attempt -= 1  # 不占用网络重试次数
+                continue
+            if attempt > retries:
+                raise
+            time.sleep(min(2 * attempt, 5))
 
 
 def _output_has(text: str, words) -> bool:
@@ -275,7 +345,8 @@ def _output_has(text: str, words) -> bool:
     return any(w in low for w in words)
 
 
-def process_device(dev: Device, timeout: int, retries: int, check_only: bool) -> Result:
+def process_device(dev: Device, timeout: int, retries: int, check_only: bool,
+                   backup_dir: Optional[str] = None) -> Result:
     t0 = time.time()
 
     def done(status, stage="", detail="", prompt="") -> Result:
@@ -291,13 +362,28 @@ def process_device(dev: Device, timeout: int, retries: int, check_only: bool) ->
         conn = _connect(dev, timeout, retries)
     except NetmikoAuthenticationException:
         return done(STATUS_FAIL, "账号认证", "用户名或密码错误（已停止重试以避免账号锁定），或该账号无 SSH 登录权限")
-    except NetmikoTimeoutException as e:
-        return done(STATUS_FAIL, "SSH 登录", f"SSH 会话超时: {_short(e)}")
     except Exception as e:  # noqa: BLE001
-        hint = ""
-        if "no matching" in str(e).lower():
-            hint = "（SSH 算法协商失败，设备端算法过旧或过新，需调整设备/paramiko 配置）"
-        return done(STATUS_FAIL, "SSH 登录", f"{type(e).__name__}: {_short(e)}{hint}")
+        # 注意：netmiko 会把 paramiko 的 SSHException 包装成 NetmikoTimeoutException，
+        # 所以必须先按错误内容判断，不能只看异常类型
+        if is_negotiation_error(e):
+            if _paramiko_major() >= 5:
+                return done(
+                    STATUS_FAIL, "SSH 算法协商",
+                    f"当前 paramiko {paramiko.__version__} 已移除 SHA-1 密钥交换和 ssh-rsa(SHA-1)，"
+                    "无法连接只支持这些算法的老设备（如 Comware 5）。"
+                    '请降级后重试: pip install "paramiko<5"。'
+                    f"原始错误: {_short(e)}",
+                )
+            return done(
+                STATUS_FAIL, "SSH 算法协商",
+                "本机与设备没有共同的 SSH 算法（已尝试启用旧算法仍失败）。"
+                "请用 `ssh -vv 用户@IP` 查看设备支持的算法，或在设备上执行 "
+                "`ssh server key-exchange dh-group14-sha1`（命令因型号而异）。"
+                f"原始错误: {_short(e)}",
+            )
+        if isinstance(e, NetmikoTimeoutException):
+            return done(STATUS_FAIL, "SSH 登录", f"SSH 会话超时或被对端中断: {_short(e)}")
+        return done(STATUS_FAIL, "SSH 登录", f"{type(e).__name__}: {_short(e)}")
 
     try:
         # 3) 登录后校验
@@ -317,6 +403,14 @@ def process_device(dev: Device, timeout: int, retries: int, check_only: bool) ->
                 note = "；警告: display version 回显中未发现 Comware/H3C 字样"
         except ReadTimeout:
             note = "；警告: display version 超时"
+
+        # 可选：把当前配置备份到本地（只读操作；失败则不继续保存，便于发现问题）
+        if backup_dir:
+            try:
+                bpath, bwarn = backup_config(conn, dev, backup_dir)
+                note += f"；已备份到 {bpath}{bwarn}"
+            except Exception as e:  # noqa: BLE001
+                return done(STATUS_FAIL, "备份配置", f"{_short(e)}（为安全起见未执行保存）", prompt)
 
         if check_only:
             return done(STATUS_CHECK_OK, "", f"端口开放、认证通过、提示符 {prompt}{note}", prompt)
@@ -357,6 +451,29 @@ def process_device(dev: Device, timeout: int, retries: int, check_only: bool) ->
             conn.disconnect()
         except Exception:  # noqa: BLE001
             pass
+
+
+def _safe_filename(s: str) -> str:
+    return re.sub(r'[\\/:*?"<>|\s]+', "_", s).strip("_") or "device"
+
+
+def backup_config(conn, dev: Device, backup_dir: str) -> Tuple[str, str]:
+    """把设备当前运行配置读到本地 .cfg 文件。返回 (文件路径, 警告信息)；失败抛 RuntimeError。"""
+    out = conn.send_command_timing("display current-configuration", read_timeout=180)
+    text = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", out)           # 去掉终端控制字符
+    text = re.sub(r"[ \t]*-+\s*More\s*-+[ \t]*", "", text)       # 去掉分页残留
+    text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if len(text) < 20 or _output_has(text[:300], ("unrecognized", "error", "permission denied",
+                                                  "authorization failed", "incomplete command")):
+        raise RuntimeError(f"读取配置失败: {' '.join(text.split())[:150]}")
+    warn = ""
+    if text.splitlines()[-1].strip().lower() != "return":      # Comware 配置以 return 结尾
+        warn = "；警告: 配置末尾不是 return，文件可能不完整"
+    folder = Path(backup_dir)
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{_safe_filename(dev.name)}_{dev.ip}_{datetime.now():%Y%m%d_%H%M%S}.cfg"
+    path.write_text(text + "\n", encoding="utf-8")
+    return str(path), warn
 
 
 def _short(e: Exception, n: int = 200) -> str:
@@ -400,6 +517,10 @@ def main() -> int:
     ap.add_argument("-t", "--timeout", type=int, default=20, help="连接/认证超时秒数，默认20")
     ap.add_argument("-r", "--retries", type=int, default=2, help="网络类错误重试次数，默认2（认证失败不重试）")
     ap.add_argument("--check-only", action="store_true", help="只校验端口与账号密码，不保存配置")
+    ap.add_argument("--backup", nargs="?", const="backup", metavar="DIR",
+                    help="把每台设备当前配置备份为本地 .cfg 文件，目录默认 ./backup（先备份再保存）")
+    ap.add_argument("--legacy-ssh", action="store_true",
+                    help="启动时直接启用旧版 SSH 算法（默认遇到协商失败时才自动启用）")
     ap.add_argument("--template", action="store_true", help="生成 Excel 模板并退出")
     ap.add_argument("-v", "--verbose", action="store_true", help="输出调试日志")
     args = ap.parse_args()
@@ -424,6 +545,9 @@ def main() -> int:
         ],
     )
     logging.getLogger("paramiko").setLevel(logging.CRITICAL)  # 屏蔽 paramiko 噪音
+    if args.legacy_ssh:
+        enable_legacy_algorithms()
+        log.info("已启用旧版 SSH 算法兼容（--legacy-ssh）")
 
     devices, results = read_devices(args.file)
     for r in results:
@@ -437,7 +561,8 @@ def main() -> int:
 
     interrupted = False
     pool = ThreadPoolExecutor(max_workers=min(args.workers, len(devices)))
-    futures = {pool.submit(process_device, d, args.timeout, args.retries, args.check_only): d
+    futures = {pool.submit(process_device, d, args.timeout, args.retries, args.check_only,
+                           args.backup): d
                for d in devices}
     try:
         for fut in as_completed(futures):
