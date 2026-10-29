@@ -176,6 +176,7 @@ def write_markdown(results: List[DeviceResult], path: Path, meta: Dict[str, Any]
 
     warnings = []
     for result in results:
+        warnings.extend(f"{result.label}: {w}" for w in result.warnings)
         for stage in (result.snmp, result.zabbix):
             if stage and stage.warnings:
                 warnings.extend(f"{result.label}: {w}" for w in stage.warnings)
@@ -245,7 +246,8 @@ def write_xlsx(results: List[DeviceResult], path: Path, meta: Dict[str, Any]) ->
     ws.title = "巡检汇总"
     ws.append([
         "序号", "设备名", "管理IP", "型号", "Comware", "运行时长(天)", "CPU%", "内存%",
-        "最高温(℃)", "风扇", "电源", "端口up/总", "健康分", "等级", "SNMP", "Zabbix", "备份", "主要问题",
+        "最高温(℃)", "风扇", "电源", "端口up/总", "健康分", "等级", "SNMP", "Zabbix", "备份",
+        "登录账号", "主要问题",
     ])
     for index, result in enumerate(results, start=1):
         insp = result.inspection
@@ -255,6 +257,7 @@ def write_xlsx(results: List[DeviceResult], path: Path, meta: Dict[str, Any]) ->
                 "-", 0, result.level, result.snmp.status if result.snmp else "-",
                 result.zabbix.status if result.zabbix else "-",
                 result.backup.status if result.backup else "-",
+                result.login_account or "-",
                 result.error or "无法登录",
             ])
             continue
@@ -276,9 +279,10 @@ def write_xlsx(results: List[DeviceResult], path: Path, meta: Dict[str, Any]) ->
             result.snmp.status if result.snmp else "-",
             result.zabbix.status if result.zabbix else "-",
             result.backup.status if result.backup else "-",
+            result.login_account or "-",
             "；".join(result.problems()[:3]),
         ])
-    style_sheet(ws, [5, 18, 15, 20, 20, 12, 8, 8, 10, 10, 10, 11, 8, 8, 10, 12, 10, 45])
+    style_sheet(ws, [5, 18, 15, 20, 20, 12, 8, 8, 10, 10, 10, 11, 8, 8, 10, 12, 10, 14, 45])
     for row in ws.iter_rows(min_row=2, min_col=14, max_col=14):
         for cell in row:
             fill = level_fill.get(str(cell.value))

@@ -19,6 +19,13 @@ python run.py full                    # 预览：巡检+团体名+Zabbix+备份�
 python run.py full --apply            # 实际执行（会二次确认）
 ```
 
+**只想配团体名**，设备清单里填好 IP / 用户名 / 密码，两条命令就够：
+
+```bash
+python run.py snmp                    # 预览：打印用哪个账号、配什么团体名、ACL 放行谁
+python run.py snmp --apply -y         # 批量登录 → 下发 → 回读校验 → save
+```
+
 四个阶段都做了**幂等**处理：已符合标准的设备会显示"无变化"，重复跑不会反复改设备。
 
 ---
@@ -28,7 +35,7 @@ python run.py full --apply            # 实际执行（会二次确认）
 | 阶段 | 做什么 | 是否改设备 |
 |------|--------|-----------|
 | `inspect` 巡检 | 型号/序列号/Comware 版本/运行时长、CPU、内存、温度、风扇、电源、端口 up-down、光模块收光、SNMP 配置现状，输出健康分与告警 | 只读 |
-| `snmp` 团体名 | 统一 v2c + 只读团体名 + **ACL 只放行监控平台 IP** + trap 指向 Zabbix；不配写团体名 | 改（需 `--apply`） |
+| `snmp` 团体名 | 按清单账号密码登录（失败自动换候选账号）、必要时 `super` 提权，统一 v2c + 只读团体名 + **ACL 只放行监控平台 IP** + trap 指向 Zabbix；不配写团体名；下发后回读校验 | 改（需 `--apply`） |
 | `zabbix` 接入 | 建主机组、关联华三模板、建 SNMP 接口、写 `{$SNMP_COMMUNITY}` 宏、启用监控 | 改 Zabbix（需 `--apply`） |
 | `backup` 备份 | `display current-configuration` 快照 + `latest.cfg` + 与上一版的 unified diff + 按份数保留 | 改（`save` 需 `--apply`） |
 
@@ -65,7 +72,7 @@ python run.py init
 | IP | **是** | 管理地址，支持域名 |
 | 用户名 / 密码 | 否 | 留空则用 `config.json` 的默认凭据 |
 | 端口 | 否 | 默认 22 |
-| super密码 | 否 | 需要提权时填 |
+| super密码 | 否 | 账号权限不足时填，登录后自动 `super` 提权 |
 | 分组 | 否 | 覆盖 Zabbix 主机组，如 `核心区` |
 | Zabbix模板 | 否 | 覆盖模板名（按设备型号不同时用） |
 | 团体名 | 否 | 覆盖全局团体名（个别设备要特殊值时用） |
@@ -73,6 +80,44 @@ python run.py init
 | 备注 / 启用 | 否 | 启用填"否"则跳过该行 |
 
 > 密码列为纯数字时，请把单元格格式设为"文本"，否则 Excel 会吃掉前导 0。
+
+用 `python run.py devices` 可以看到每台设备**实际会用哪个账号登录**（来源标记为"设备清单"还是"配置默认"）和密码位数，填错了当场能看出来。
+
+### 3.1 账号密码怎么给（自动登录规则）
+
+按下面的顺序取，取到能登录的为止：
+
+1. 命令行 `--user` / `--password` —— **只用它**，不再回落到清单（避免"以为在试 A，其实试了 B"）
+2. **设备清单该行的用户名 / 密码**
+3. `config.json` → `credentials.candidates` 候选账号（可配多套，如 `admin`、`h3c`）
+4. `config.json` → `credentials.username` / `password`（兜底）
+
+```jsonc
+"credentials": {
+  "username": "netops", "password": "默认密码", "secret": "",
+  "candidates": [
+    { "username": "admin", "password": "Admin@123" },
+    { "username": "h3c",   "password": "H3C@1234", "secret": "super密码" }
+  ]
+}
+```
+
+规则细节：
+
+- **同一个账号密码只试一次**。认证失败才换下一个账号，绝不重复试同一个——避免触发设备账号锁定。
+- **网络类错误不换账号**（超时、算法协商失败、提示符识别失败），换账号没有意义，直接报错。
+- 用了备用账号会记进报告的「需要注意」里，不会悄悄换成别的账号。
+- 配了 `super密码` 时登录后自动提权；提权失败只记告警，继续尝试（真进不去 `system-view` 会明确报"账号权限不足"）。
+
+### 3.2 登录不上时的对照表
+
+| 现象 | 原因 | 处理 |
+|------|------|------|
+| 认证失败 | 账号密码错 / 账号无 SSH 权限 | 核对清单；已自动尝试候选账号，仍失败会列出试过哪些 |
+| 连接超时 | 路由、ACL、防火墙、SSH 未开 | 从本机 `telnet IP 22` 先确认端口通 |
+| SSH 算法协商失败 | 老固件只支持 SHA-1 系算法，新版 paramiko 已移除 | 升级固件或在设备上放开兼容算法；实在不行用 `pip install "paramiko<3"` 的旧版环境 |
+| 无法进入系统视图 | 账号权限低于 level 3 | 清单里补 `super密码`，或换有权限的账号 |
+| 登录后无提示符 | 不是华三设备 / 登录后有多余交互（如首次改密） | 先手工登录一次确认 |
 
 ### 4. 改配置
 
@@ -137,12 +182,23 @@ python run.py <命令> [选项]
 | `-w N` | 并发数（1-50，默认 8） |
 | `-f devices.xlsx` | 指定清单，覆盖配置 |
 | `-c other.json` | 指定配置文件 |
+| `--user` / `--password` | 临时指定账号密码（覆盖清单，两个必须同时给） |
+| `--secret` | 临时指定 super 密码（配合 `--user`） |
 | `-v` | 调试日志 |
 
 示例：
 
 ```bash
-# 只给一台设备配团体名并保存
+# 按清单里的账号密码，批量配置团体名并保存
+python run.py snmp --apply -y
+
+# 先拿一台试水，确认巡检/团体名数据都对
+python run.py snmp --apply -y --limit 1
+
+# 临时用另一个账号（清单里的密码过期时应急）
+python run.py snmp --apply -y --user admin --password 'Admin@123'
+
+# 只给一台设备配团体名
 python run.py snmp --only SW-Core-01 --apply -y
 
 # 只看 Zabbix 接入计划，不写入
@@ -201,10 +257,10 @@ backups/SW-Core-01/
 1. **默认只读**：任何写操作都要显式 `--apply`，且 `--apply` 时还会二次确认（`-y` 可跳过）。
 2. **团体名只读**：不配读写权限团体名，`write_community` 默认留空。
 3. **ACL 收敛**：团体名绑定基本 ACL，只放行 `acl_sources` 里的监控平台 IP，其他地址 SNMP 不可达。ACL 只补齐缺失规则，不动已有规则。
-4. **认证失败不重试**：账号密码错误立即停止，避免触发设备账号锁定（网络类错误才重试）。
+4. **同一账号不重复试**：认证失败会换下一个候选账号（每个账号只试一次），绝不重复试同一个，避免触发设备账号锁定；网络类错误直接报错不换账号。
 5. **Zabbix 同名冲突不覆盖**：主机名已存在但 SNMP 接口 IP 不一致时直接报"冲突"跳过，防止把另一台设备改坏；确认无误会再开 `overwrite_interface`。
 6. **配置可回溯**：每次备份留快照和 diff，命令下发前有 `--apply` 确认，出问题能看 diff 定位。
-7. **凭据不落库**：`config.json`、`devices.xlsx`、`runs/`、`backups/` 都在 `.gitignore` 里。
+7. **凭据不落库**：`config.json`、`devices.xlsx`、`runs/`、`backups/` 都在 `.gitignore` 里；日志和报告只记账号名，不记密码。
 
 ---
 
@@ -222,8 +278,8 @@ backups/SW-Core-01/
 
 | 现象 | 原因 / 处理 |
 |------|-------------|
-| `认证失败：用户名/密码错误` | 账号无 SSH 权限或密码错。程序不会重试，改完再跑 |
-| `SSH 算法协商失败` | 老设备算法太旧。设备侧放开 `ssh server enable` 的 KEX/加密算法，或换用支持旧算法的 paramiko |
+| `全部凭据均认证失败（已尝试 N 个账号）` | 清单账号和候选账号都进不去。报告里会列出试过哪些账号；改密码后重跑 |
+| `SSH 算法协商失败` | 老设备只支持 SHA-1 系 KEX，新版 paramiko 已移除该实现。升级固件，或改用 `pip install "paramiko<3"` 的兼容环境 |
 | `登录后未识别到设备提示符` | 不是华三设备 / 登录后还有额外交互（如二次认证菜单）。先手工 SSH 看一遍 |
 | 巡检里 `display fan 执行失败` 但不影响结论 | 部分型号没有该命令，属正常（风扇/电源/温度按可选命令处理） |
 | `未找到模板 H3C Comware by SNMP` | 先在 Zabbix 导入模板，或把 `template_candidates` 改成实际模板名 |
@@ -243,7 +299,8 @@ h3c-ops-agent/
 ├── h3c_ops/
 │   ├── config.py           # 配置加载（JSON + 默认值 + 环境变量）
 │   ├── inventory.py        # 设备清单（xlsx/csv/json）
-│   ├── ssh.py              # Comware 交互层（paramiko，提示符/分页/save 交互）
+│   ├── login.py            # 登录策略：多套凭据回落 + super 提权
+│   ├── ssh.py              # Comware 交互层（paramiko，提示符/分页/save/提权交互）
 │   ├── inspect.py          # 巡检采集与健康判定（解析器均为纯函数）
 │   ├── snmp.py             # 标准团体名 + ACL
 │   ├── zabbix.py           # Zabbix API 接入（先查后改，产出变更计划）
@@ -251,7 +308,7 @@ h3c-ops-agent/
 │   ├── report.py           # 控制台 / Markdown / Excel
 │   ├── models.py           # 结果模型
 │   └── runner.py           # 并发调度
-└── tests/                  # 103 个用例，全部不依赖真实设备
+└── tests/                  # 117 个用例，全部不依赖真实设备
 ```
 
 测试：
@@ -260,7 +317,7 @@ h3c-ops-agent/
 python -m unittest discover -s tests -t .
 ```
 
-测试用什么保证的：巡检解析器喂真实 Comware 回显样本；SSH 层用假 channel 模拟设备（覆盖分页、`save force` 的 `[Y/N]` 与文件名确认、`[flash:/startup.cfg]` 不被误判为提示符）；Zabbix 层只测变更计划，不发网络请求。
+测试用什么保证的：巡检解析器喂真实 Comware 回显样本；SSH 层用假 channel 模拟设备（覆盖分页、`save force` 的 `[Y/N]` 与文件名确认、`[flash:/startup.cfg]` 不被误判为提示符、`super` 提权的密码交互）；登录策略用假会话验证"回落顺序 / 每个账号只试一次 / 网络错误不换账号"；Zabbix 层只测变更计划，不发网络请求。
 
 ---
 
@@ -270,4 +327,5 @@ python -m unittest discover -s tests -t .
 - 只做了 Comware 语法；华为 VRP / 思科 IOS 需要改 `snmp.py` 与 `ssh.py` 的提示符规则
 - 巡检项以"能快速判断设备健康"为准，没做路由协议邻居、STP 拓扑这类深度采集
 - 配置 diff 是与**上一次备份**比，不是与 `startup-configuration` 比；设备上没有可靠的配置比对命令
+- 当前 paramiko 5.x **不再实现 SHA-1 系 KEX 与 `ssh-rsa`**，只支持这些算法的早期固件（部分 Comware V5）会报"算法协商失败"，需要升级固件或用 `paramiko<3` 的兼容环境
 - 数据库/AD 等外部认证账号不在支持范围（需要交互式输入密码的设备用不了）

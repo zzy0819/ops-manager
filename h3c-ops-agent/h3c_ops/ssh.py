@@ -49,6 +49,51 @@ WARN_MARKERS = ("already exists", "has been configured", "no change", "the same"
 SAVE_OK = ("successfully", "saved the current configuration", "save configuration successfully")
 SAVE_FAIL = ("failed", "error", "not permitted", "permission denied", "no space", "insufficient")
 
+# super 提权回显（"now user privilege is" 只在真正提权成功时出现，
+# "user privilege level is 3" 也可能出现在"已是 3 级无需提权"的提示里，故不列入）
+SUPER_OK = ("now user privilege is", "elevate successfully")
+SUPER_FAIL = (
+    "password is not correct",
+    "incorrect password",
+    "wrong password",
+    "password is invalid",
+    "permission denied",
+    "not permitted",
+)
+
+# 老华三（Comware V5 / 早期 V7）只支持 SHA-1 系算法和 CBC 加密，paramiko 新版本
+# 默认不再协商。这里把"当前 paramiko 仍然实现、但默认不优先"的算法追加到偏好列表
+# **末尾**：现代设备仍会先协商强算法，只有老设备才会退化，等于零成本兼容。
+LEGACY_KEX = (
+    "diffie-hellman-group14-sha1",
+    "diffie-hellman-group-exchange-sha1",
+    "diffie-hellman-group1-sha1",
+)
+LEGACY_KEYS = ("ssh-rsa", "ssh-dss")
+LEGACY_CIPHERS = ("aes128-cbc", "aes192-cbc", "aes256-cbc", "3des-cbc")
+LEGACY_MACS = ("hmac-sha1", "hmac-sha1-96")
+
+
+def enable_legacy_algorithms() -> List[str]:
+    """把老设备算法追加到 paramiko 偏好末尾，返回实际追加的算法名（便于排错）。"""
+    from paramiko.transport import Transport
+
+    added: List[str] = []
+    plan = (
+        ("_preferred_kex", "_kex_info", LEGACY_KEX),
+        ("_preferred_keys", "_key_info", LEGACY_KEYS),
+        ("_preferred_ciphers", "_cipher_info", LEGACY_CIPHERS),
+        ("_preferred_macs", "_mac_info", LEGACY_MACS),
+    )
+    for attr, info_attr, wanted in plan:
+        available = getattr(Transport, info_attr, {}) or {}
+        current = tuple(getattr(Transport, attr, ()) or ())
+        extra = tuple(a for a in wanted if a in available and a not in current)
+        if extra:
+            setattr(Transport, attr, current + extra)
+            added.extend(extra)
+    return added
+
 # save 交互：老版本会先问是否继续，再问文件名
 SAVE_QUESTION_RE = re.compile(r"\[y/n\]|\(y/n\)|continue\?|are you sure", re.IGNORECASE)
 SAVE_FILENAME_RE = re.compile(
@@ -190,8 +235,13 @@ class H3CSession:
         except (paramiko.SSHException, OSError) as e:
             client.close()
             hint = ""
-            if "no matching" in str(e).lower() or "kex" in str(e).lower():
-                hint = "（SSH 算法协商失败，设备端算法过旧，需放开 KEX/加密算法）"
+            detail = str(e).lower()
+            if "no matching" in detail or "kex" in detail:
+                hint = (
+                    "（SSH 算法协商失败：设备固件可能只支持 SHA-1 系算法。"
+                    "可先在设备上执行 ssh server compatible-ssh1x enable 或升级固件；"
+                    "仍不行时可临时 pip install \"paramiko<3\" 用旧算法兼容模式）"
+                )
             raise ConnectError(f"SSH 连接失败: {shorten(str(e))}{hint}") from e
 
         self.client = client
@@ -406,9 +456,14 @@ class H3CSession:
 
     # ------------------------------------------------------------ 配置模式 --
     def enter_config(self) -> None:
-        self.send("system-view", timeout=20)
+        output = self.send("system-view", timeout=20)
         if not self.current_prompt.startswith("["):
-            raise ConfigModeError("无法进入系统视图（账号权限不足？）")
+            err = find_error(output)
+            raise ConfigModeError(
+                "无法进入系统视图（账号权限不足）"
+                + (f"，设备提示: {err}" if err else "")
+                + "。请确认该账号为 level 3 权限，或在设备清单里填 super密码 让程序自动提权"
+            )
 
     def leave_config(self) -> None:
         try:
@@ -483,17 +538,64 @@ class H3CSession:
             return SaveResult(True, True, "配置已保存（save force 回显确认）")
         return SaveResult(True, False, f"未在回显中确认保存结果，请人工核实: {shorten(text, 160)}")
 
-    def elevate(self) -> Optional[str]:
-        """可选提权（super）。返回 None 表示成功或无需提权。"""
+    def elevate(self, level: int = 3, timeout: float = 25) -> Tuple[bool, str]:
+        """super 提权：低权限账号进 system-view 前必须先做。
+
+        Comware 的交互不是标准命令回显（问 Password: 后不吐提示符），
+        所以这里直接操作 channel，不能复用 send()。
+        返回 (是否具备配置权限, 说明)。
+        """
         if not self.secret:
-            return None
-        output = self.send("super", timeout=15)
-        if "assword" in output.lower():
-            output = self.send(self.secret, timeout=15)
-            if any(word in output.lower() for word in ("incorrect", "invalid", "failed", "denied")):
-                return "super 密码错误，无法提权"
-        return None
+            return True, "未配置 super 密码，按账号原权限执行"
+        if not self.chan:
+            raise H3CError("会话未建立")
+
+        self._drain()
+        self.chan.send(f"super {level}\n")
+        deadline = time.time() + timeout
+        buffer = ""
+        sent_password = False
+        while time.time() < deadline:
+            if self.chan.recv_ready():
+                chunk = strip_ansi(self._decoder.decode(self.chan.recv(65535)))
+                if not chunk:
+                    break
+                buffer += chunk
+                if not sent_password and re.search(
+                    r"(?:password|密码)\s*[:：]\s*$", buffer[-200:], re.I
+                ):
+                    self.chan.send(self.secret + "\n")
+                    sent_password = True
+                    deadline = time.time() + timeout
+                    continue
+                if self.prompt_re.search(strip_ansi(buffer).rstrip()[-160:]):
+                    break
+            else:
+                time.sleep(0.05)
+
+        text = self._clean(buffer, "")
+        lowered = text.lower()
+        self._update_prompt(strip_ansi(buffer))
+
+        if any(mark in lowered for mark in SUPER_FAIL):
+            return False, f"super 提权失败: {shorten(text, 160)}"
+        if any(mark in lowered for mark in SUPER_OK):
+            return True, f"已提权到 {level} 级"
+        if (
+            "already" in lowered
+            or "no need" in lowered
+            or re.search(r"privilege(?:\s+level)?\s+is\s+\d", lowered)
+        ):
+            return True, "当前权限已满足，无需提权"
+        if not sent_password:
+            return False, f"未出现 super 密码提示（账号可能无提权权限）: {shorten(text, 140)}"
+        return True, f"已发送 super 密码，回显未明确确认: {shorten(text, 120)}"
 
 
 class ConfigModeError(H3CError):
     pass
+
+
+# 导入即生效：仅把 paramiko 已实现但默认不协商的老算法追加到偏好末尾，
+# 保证多线程连接时行为一致（不靠连接失败后再改全局状态）。
+LEGACY_ALGORITHMS_ENABLED = enable_legacy_algorithms()

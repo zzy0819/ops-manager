@@ -45,6 +45,9 @@ class DeviceResult:
     zabbix: Optional[Stage] = None
     backup: Optional[BackupResult] = None
     elapsed: float = 0.0
+    login_account: str = ""       # 实际登录成功的账号（多凭据回落后可能不是清单里的）
+    login_note: str = ""          # 提权情况说明
+    warnings: List[str] = field(default_factory=list)  # 登录/提权阶段的告警
 
     @property
     def label(self) -> str:

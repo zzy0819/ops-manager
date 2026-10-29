@@ -1,11 +1,14 @@
 {
   "_comment": "复制本文件为 config.json 后修改。密码字段支持用环境变量覆盖：H3C_PASSWORD / ZABBIX_PASSWORD",
+  "_credentials_tip": "登录顺序：命令行 --user/--password > 设备清单该行 > credentials.candidates 候选账号 > 下面这套默认账号。同一账号只试一次，避免触发设备锁定。",
   "inventory_file": "devices.xlsx",
   "credentials": {
     "username": "netops",
     "password": "CHANGE_ME",
-    "secret": ""
+    "secret": "",
+    "candidates": []
   },
+  "_candidates_example": "清空 candidates 表示只用清单/默认账号。需要多套备用账号时按这样填：[{\"username\":\"admin\",\"password\":\"xxx\"},{\"username\":\"h3c\",\"password\":\"yyy\",\"secret\":\"super密码\"}]",
   "global": {
     "concurrency": 8,
     "connect_timeout": 15,

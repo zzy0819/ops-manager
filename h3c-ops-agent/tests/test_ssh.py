@@ -211,6 +211,59 @@ class ConfigModeTest(unittest.TestCase):
         self.assertNotIn("never-sent\n", session.chan.sent)
 
 
+class ElevateTest(unittest.TestCase):
+    """super 提权是"问密码"的交互，不走标准命令回显，必须单独验证。"""
+
+    def test_correct_secret_elevates(self):
+        session = make_session()
+        session.secret = "S3cret!"
+        session.chan.handlers["super 3"] = "Password:"
+        session.chan.handlers["S3cret!"] = (
+            "Now user privilege is 3 level. Press Ctrl+C to abort.\r\n<SW-Core-01>"
+        )
+        ok, note = session.elevate()
+        self.assertTrue(ok, note)
+        self.assertIn("3 级", note)
+        self.assertIn("S3cret!\n", session.chan.sent)
+
+    def test_wrong_secret_reports_failure(self):
+        session = make_session()
+        session.secret = "WrongOne"
+        session.chan.handlers["super 3"] = "Password:"
+        session.chan.handlers["WrongOne"] = (
+            "Error: Password is not correct.\r\n<SW-Core-01>"
+        )
+        ok, note = session.elevate()
+        self.assertFalse(ok)
+        self.assertIn("提权失败", note)
+
+    def test_already_privileged_is_not_a_failure(self):
+        session = make_session()
+        session.secret = "S3cret!"
+        session.chan.handlers["super 3"] = (
+            "Error: The user privilege level is 3, no need to elevate.\r\n<SW-Core-01>"
+        )
+        ok, note = session.elevate()
+        self.assertTrue(ok, note)
+        self.assertIn("无需提权", note)
+
+    def test_no_secret_returns_immediately(self):
+        session = make_session()
+        ok, note = session.elevate()
+        self.assertTrue(ok)
+        self.assertEqual(session.chan.sent, [])
+
+    def test_missing_password_prompt_reports_reason(self):
+        session = make_session()
+        session.secret = "S3cret!"
+        session.chan.handlers["super 3"] = (
+            "Error: The user does not have the privilege to execute the command.\r\n<SW-Core-01>"
+        )
+        ok, note = session.elevate()
+        self.assertFalse(ok)
+        self.assertIn("未出现", note)
+
+
 class StripAnsiTest(unittest.TestCase):
     def test_removes_escape_sequences(self):
         self.assertEqual(strip_ansi("\x1b[1mUP\x1b[0m"), "UP")

@@ -16,7 +16,7 @@ class ConfigError(Exception):
 
 DEFAULTS: Dict[str, Any] = {
     "inventory_file": "devices.xlsx",
-    "credentials": {"username": "", "password": "", "secret": ""},
+    "credentials": {"username": "", "password": "", "secret": "", "candidates": []},
     "global": {
         "concurrency": 8,
         "connect_timeout": 15,
@@ -157,6 +157,9 @@ def _normalise(cfg: Config) -> None:
     for key in ("connect_timeout", "command_timeout", "save_timeout"):
         g[key] = max(5, int(g.get(key, 30) or 30))
 
+    c = cfg.section("credentials")
+    c["candidates"] = _normalise_candidates(c.get("candidates"))
+
     z = cfg.section("zabbix")
     if z.get("url"):
         z["url"] = str(z["url"]).rstrip("/")
@@ -170,6 +173,29 @@ def _normalise(cfg: Config) -> None:
 
     b = cfg.section("backup")
     b["keep"] = max(1, int(b.get("keep", 30) or 30))
+
+
+def _normalise_candidates(raw: Any) -> list[Dict[str, str]]:
+    """候选账号支持两种写法，统一成 [{'username','password','secret'}]。"""
+    if isinstance(raw, dict):
+        raw = [raw]
+    if not isinstance(raw, list):
+        return []
+
+    out: list[Dict[str, str]] = []
+    for item in raw:
+        if isinstance(item, dict):
+            user = str(item.get("username") or item.get("user") or "").strip()
+            password = str(item.get("password") or "")
+            secret = str(item.get("secret") or "")
+        elif isinstance(item, (list, tuple)) and len(item) >= 2:
+            user, password = str(item[0] or "").strip(), str(item[1] or "")
+            secret = str(item[2] or "") if len(item) > 2 else ""
+        else:
+            continue
+        if user and password:
+            out.append({"username": user, "password": password, "secret": secret})
+    return out
 
 
 def require(cfg: Config, *dotted_keys: str) -> list[str]:

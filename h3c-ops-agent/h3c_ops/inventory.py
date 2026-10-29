@@ -58,6 +58,7 @@ class Device:
     location: str = ""
     remark: str = ""
     enabled: bool = True
+    credential_source: str = ""  # 凭据来自哪里：设备清单 / 配置默认 / 命令行
 
     @property
     def label(self) -> str:
@@ -186,12 +187,13 @@ def read_inventory(
 
         ip = get("ip")
         port_text = get("port") or "22"
+        row_user, row_password, row_secret = get("username"), get("password"), get("secret")
         device = Device(
             row=line_no,
             ip=ip,
-            username=get("username") or default_user,
-            password=get("password") or default_password,
-            secret=get("secret") or default_secret,
+            username=row_user or default_user,
+            password=row_password or default_password,
+            secret=row_secret or default_secret,
             name=get("name"),
             group=get("group"),
             template=get("template"),
@@ -200,6 +202,12 @@ def read_inventory(
             remark=get("remark"),
             enabled=_truthy(get("enabled") or "是"),
         )
+        if row_user and row_password:
+            device.credential_source = "设备清单"
+        elif row_user or row_password:
+            device.credential_source = "清单+配置默认"
+        else:
+            device.credential_source = "配置默认"
 
         problems: List[str] = []
         if not ip:

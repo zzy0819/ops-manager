@@ -16,8 +16,9 @@ from . import inspect as inspect_mod
 from . import report as report_mod
 from . import snmp as snmp_mod
 from .inventory import Device
+from .login import Credential, open_session
 from .models import DeviceResult, Stage
-from .ssh import AuthError, ConnectError, H3CError, H3CSession
+from .ssh import AuthError, ConnectError, H3CError
 from .zabbix import HostSpec, ZabbixAPI, ZabbixError, ensure_host
 
 log = logging.getLogger("h3c_ops.runner")
@@ -37,28 +38,24 @@ def prepare_run_dir(cfg) -> Path:
     return run_dir
 
 
-def _session(cfg, device: Device) -> H3CSession:
-    return H3CSession(
-        ip=device.ip,
-        username=device.username,
-        password=device.password,
-        port=device.port,
-        secret=device.secret,
-        connect_timeout=int(cfg.get("global.connect_timeout", 15)),
-        command_timeout=int(cfg.get("global.command_timeout", 30)),
-        save_timeout=int(cfg.get("global.save_timeout", 180)),
-    )
-
-
-def process_device(cfg, device: Device, stages: Sequence[str], dry_run: bool) -> DeviceResult:
+def process_device(
+    cfg,
+    device: Device,
+    stages: Sequence[str],
+    dry_run: bool,
+    credential: Optional[Credential] = None,
+) -> DeviceResult:
     """单台设备：一次登录跑完所有需要 SSH 的阶段。"""
     result = DeviceResult(dev=device)
     started = time.time()
-    session = _session(cfg, device)
 
     try:
-        session.connect()
+        outcome = open_session(cfg, device, override=credential)
+        session = outcome.session
         result.reachable = True
+        result.login_account = outcome.account
+        result.login_note = outcome.privilege_note
+        result.warnings.extend(outcome.warnings)
     except (AuthError, ConnectError, H3CError) as e:
         result.error = str(e)
         result.elapsed = round(time.time() - started, 1)
@@ -186,6 +183,7 @@ def execute(
     stages: Sequence[str],
     dry_run: bool,
     run_dir: Optional[Path] = None,
+    credential: Optional[Credential] = None,
 ) -> Dict[str, Any]:
     """跑完整流程，返回 {results, run_dir, files, meta}。"""
     stages = [s for s in stages if s in ALL_STAGES]
@@ -203,7 +201,10 @@ def execute(
     results: List[DeviceResult] = []
     if ssh_stages:
         pool = ThreadPoolExecutor(max_workers=min(workers, max(1, len(devices))))
-        futures = {pool.submit(process_device, cfg, dev, stages, dry_run): dev for dev in devices}
+        futures = {
+            pool.submit(process_device, cfg, dev, stages, dry_run, credential): dev
+            for dev in devices
+        }
         try:
             for future in as_completed(futures):
                 device = futures[future]
@@ -263,6 +264,9 @@ def _serialize(result: DeviceResult) -> Dict[str, Any]:
         "ip": result.dev.ip,
         "reachable": result.reachable,
         "error": result.error,
+        "account": result.login_account,
+        "login_note": result.login_note,
+        "login_warnings": result.warnings,
         "level": result.level,
         "score": result.score,
         "model": insp.model if insp else "",
