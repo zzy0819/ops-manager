@@ -50,3 +50,11 @@ reset-audit.csv
 devices_template.xlsx
 save_config_result_*.xlsx
 save_config_result_*.csv
+
+# h3c-ops-agent：配置文件含密码、清单含凭据、备份含整机配置，均不入库
+h3c-ops-agent/config.json
+h3c-ops-agent/devices.xlsx
+h3c-ops-agent/devices.csv
+h3c-ops-agent/heartbeat
+h3c-ops-agent/runs/
+h3c-ops-agent/backups/

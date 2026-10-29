@@ -9,6 +9,7 @@
 | [web-app](./web-app) | 企业运维管理 Web 系统：攻击事件、配置变更、工单、设备台账、IP 扫描、网络诊断、群晖用户管理等 | Flask + SQLAlchemy + Bootstrap 5 | `python run.py` |
 | [synology-user-manager](./synology-user-manager) | 群晖 NAS 用户扫描 / 批量改密单文件脚本 | 仅 Python 标准库 | `python synology_user_manager.py` |
 | [auto-ssh-backup](./auto-ssh-backup) | 批量 SSH 登录华三交换机并保存配置 | netmiko + openpyxl | `python auto-ssh-back.py -f devices.xlsx` |
+| [h3c-ops-agent](./h3c-ops-agent) | 华三交换机批量运维 Agent：巡检 + 标准团体名 + 自动接入 Zabbix + 配置备份 | paramiko + requests + openpyxl | `python run.py full --apply` |
 
 ## 环境要求
 
@@ -39,6 +40,7 @@ ops-manager/
 ├── web-app/                 # 子项目：运维管理 Web 系统
 ├── synology-user-manager/   # 子项目：群晖用户扫描/批量改密脚本
 ├── auto-ssh-backup/         # 子项目：华三交换机配置批量保存
+├── h3c-ops-agent/           # 子项目：华三交换机巡检/团体名/Zabbix 接入/备份
 ├── .gitignore
 ├── README.md                # 本文件（monorepo 索引）
 └── .venv/                   # 开发环境虚拟环境（不入库）

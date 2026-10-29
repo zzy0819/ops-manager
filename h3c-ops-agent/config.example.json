@@ -1,0 +1,61 @@
+{
+  "_comment": "复制本文件为 config.json 后修改。密码字段支持用环境变量覆盖：H3C_PASSWORD / ZABBIX_PASSWORD",
+  "inventory_file": "devices.xlsx",
+  "credentials": {
+    "username": "netops",
+    "password": "CHANGE_ME",
+    "secret": ""
+  },
+  "global": {
+    "concurrency": 8,
+    "connect_timeout": 15,
+    "command_timeout": 30,
+    "save_timeout": 180,
+    "run_dir": "runs",
+    "backup_dir": "backups"
+  },
+  "inspect": {
+    "collect_optical": false,
+    "thresholds": {
+      "cpu_percent": 80,
+      "memory_percent": 85,
+      "temperature": 60,
+      "down_port_count": 0
+    }
+  },
+  "snmp": {
+    "read_community": "OpsRead@2026",
+    "write_community": "",
+    "acl_number": 2001,
+    "acl_sources": ["10.12.10.50"],
+    "contact": "netops@example.com",
+    "location": "DC-A",
+    "disable_complexity_check": true,
+    "enable_trap": true,
+    "trap_target": "10.12.10.50",
+    "trap_port": 162,
+    "save_after_apply": true
+  },
+  "zabbix": {
+    "url": "http://10.12.10.50",
+    "user": "Admin",
+    "password": "zabbix",
+    "api_token": "",
+    "verify_tls": true,
+    "host_group": "网络设备/华三交换机",
+    "template_candidates": [
+      "H3C Comware by SNMP",
+      "H3C Comware SNMPv2",
+      "Template Net H3C Comware SNMPv2"
+    ],
+    "snmp_port": 161,
+    "community_macro": "{$SNMP_COMMUNITY}",
+    "proxy_name": "",
+    "host_name_source": "sysname",
+    "overwrite_interface": false
+  },
+  "backup": {
+    "keep": 30,
+    "save_before_backup": true
+  }
+}
