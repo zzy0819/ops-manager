@@ -1,0 +1,2 @@
+netmiko>=4.1
+openpyxl>=3.1

@@ -11,12 +11,17 @@ build/
 *.spec
 *.pyz
 
+# 虚拟环境
+.venv/
+venv/
+
 # 数据库文件（包含敏感数据）
 *.db
 *.sqlite
 *.sqlite3
 
-# 扫描结果（临时文件）
+# IP 扫描结果（临时文件）
+web-app/scans/*.txt
 scans/*.txt
 
 # 缓存
@@ -38,3 +43,10 @@ Desktop.ini
 
 # 备份文件
 *.bak
+
+# 运行期输出（不含密码的审计/报告/模板）
+synology_password_reset_audit.csv
+reset-audit.csv
+devices_template.xlsx
+save_config_result_*.xlsx
+save_config_result_*.csv

@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block title %}连接群晖 NAS{% endblock %}
+{% block page_title %}群晖用户管理{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nas-hero {
+        background: linear-gradient(120deg, #0a1628 0%, #0c2d6b 55%, #1677ff 100%);
+        border-radius: 10px;
+        color: #fff;
+        padding: 28px 30px;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 18px;
+    }
+    .nas-hero::after {
+        content: '';
+        position: absolute;
+        width: 260px; height: 260px;
+        border-radius: 50%;
+        right: -60px; top: -120px;
+        background: radial-gradient(circle, rgba(0,212,255,.34), transparent 68%);
+    }
+    .nas-hero h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .nas-hero p { color: rgba(255,255,255,.72); font-size: 13px; margin: 0; max-width: 720px; }
+    .nas-hero .hero-icon {
+        width: 52px; height: 52px; border-radius: 12px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(0,212,255,.16); color: #00d4ff; font-size: 26px;
+        margin-right: 14px; flex-shrink: 0;
+    }
+    .connect-card { max-width: 860px; }
+    .form-hint { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+    .security-note {
+        background: #f7f8fa; border: 1px solid var(--border);
+        border-radius: 8px; padding: 14px 16px; font-size: 12.5px; color: var(--text-secondary);
+    }
+    .security-note i { color: var(--primary); }
+    .security-note ul { margin: 0; padding-left: 18px; }
+    .security-note li { margin: 4px 0; }
+    .input-group-text { background: #f7f8fa; border-color: var(--border); font-size: 13px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nas-hero d-flex align-items-center">
+    <div class="hero-icon"><i class="bi bi-hdd-network"></i></div>
+    <div>
+        <h2>连接群晖 NAS</h2>
+        <p>通过 DSM Web API 扫描全部本地用户，并安全地批量重置密码。无需 SSH，无需在 NAS 上安装任何套件。</p>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+{% endif %}
+
+<div class="card connect-card">
+    <div class="card-header">
+        <span><i class="bi bi-plug me-2 text-primary"></i>DSM 登录信息</span>
+        <span class="badge bg-light text-secondary">凭据仅用于本次会话</span>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('nas_users.connect') }}" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label class="form-label">NAS 地址 <span class="text-danger">*</span></label>
+                    <input type="text" name="host" class="form-control" required
+                           placeholder="192.168.1.10 或 nas.example.com"
+                           value="{{ form.get('host', '') }}">
+                    <div class="form-hint">支持 IP、主机名，也可以直接填写 https://host:5001。</div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">端口 <span class="text-danger">*</span></label>
+                    <input type="number" name="port" id="nasPort" class="form-control" min="1" max="65535"
+                           required value="{{ form.get('port', '5001') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label d-block">连接方式</label>
+                    <div class="form-check form-check-inline mt-2">
+                        <input class="form-check-input" type="checkbox" name="use_https" id="useHttps"
+                               {% if form.get('use_https', True) %}checked{% endif %}>
+                        <label class="form-check-label" for="useHttps">使用 HTTPS</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">管理员账号 <span class="text-danger">*</span></label>
+                    <input type="text" name="account" class="form-control" required
+                           placeholder="需属于 administrators 组"
+                           value="{{ form.get('account', '') }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">密码 <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="password" name="password" id="nasPassword" class="form-control" required
+                               autocomplete="new-password" placeholder="DSM 登录密码">
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePwd('nasPassword', this)" tabindex="-1">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">动态验证码（可选）</label>
+                    <input type="text" name="otp_code" class="form-control" inputmode="numeric"
+                           maxlength="8" placeholder="启用双重验证时填写 6 位验证码">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label d-block">TLS 证书</label>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="verify_ssl" id="verifySsl"
+                               {% if form.get('verify_ssl', default_verify_ssl) %}checked{% endif %}>
+                        <label class="form-check-label" for="verifySsl">
+                            校验 TLS 证书
+                            <span class="text-muted">（群晖默认自签名证书请取消）</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {% if allowed_hosts %}
+            <div class="alert alert-info mt-3 mb-0 py-2" style="font-size:12.5px;">
+                <i class="bi bi-shield-check me-1"></i>
+                已启用主机白名单：{{ allowed_hosts|join(', ') }}
+            </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-box-arrow-in-right me-1"></i>连接并扫描用户
+                </button>
+                <span class="text-muted" style="font-size:12px;">
+                    <i class="bi bi-lock me-1"></i>密码不会写入数据库
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card connect-card">
+    <div class="card-body security-note">
+        <div class="fw-semibold mb-2"><i class="bi bi-info-circle me-1"></i>使用前请确认</div>
+        <ul>
+            <li>使用的账号必须属于 <code>administrators</code> 组，且 DSM 中已开启 Web API 访问（默认开启）。</li>
+            <li>建议在 TLS 证书可信的内网环境使用；自签名证书可取消“校验 TLS 证书”，但流量仍应位于可信网络。</li>
+            <li>管理员密码只用于换取 DSM 会话，不会写入数据库或日志；DSM 会话保存在服务进程内存，超时后自动失效。</li>
+            <li>批量改密会跳过当前登录账号；重置管理员账号需要额外确认，避免误操作导致无法登录。</li>
+            <li>密码修改记录会写入本地审计表，但不包含密码内容。</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePwd(id, btn) {
+    var input = document.getElementById(id);
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+    var icon = btn.querySelector('i');
+    if (icon) icon.className = input.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+}
+
+(function () {
+    var https = document.getElementById('useHttps');
+    var port = document.getElementById('nasPort');
+    if (!https || !port) return;
+    var lastAuto = port.value;
+    https.addEventListener('change', function () {
+        // 仅在用户没有手动改过端口时自动切换 5001/5000
+        if (port.value === lastAuto) {
+            port.value = https.checked ? '5001' : '5000';
+        }
+        lastAuto = port.value;
+    });
+})();
+</script>
+{% endblock %}

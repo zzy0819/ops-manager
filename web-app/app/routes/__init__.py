@@ -11,6 +11,7 @@ def register_blueprints(app):
     from app.routes.monitor import monitor_bp
     from app.routes.config_backup import config_backup_bp
     from app.routes.diagnosis import diagnosis_bp
+    from app.routes.nas_users import nas_users_bp
     from app.api.docs import docs_bp
     from app.api.v1.attacks import api_attacks_bp
     from app.api.v1.configs import api_configs_bp
@@ -27,6 +28,7 @@ def register_blueprints(app):
     app.register_blueprint(monitor_bp)
     app.register_blueprint(config_backup_bp)
     app.register_blueprint(diagnosis_bp)
+    app.register_blueprint(nas_users_bp)
     app.register_blueprint(docs_bp)
 
     # API v1 端点

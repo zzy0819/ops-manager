@@ -1,8 +1,8 @@
-# 运维管理系统 - 版本 V1.5
+# 运维管理系统 - 版本 V1.6
 
 ## 版本信息
-- 版本号：V1.5
-- 发布日期：2026-06-14
+- 版本号：V1.6
+- 发布日期：2026-10-29
 - 技术栈：Python Flask + SQLAlchemy + SQLite + Bootstrap 5
 
 ## 功能模块
@@ -20,6 +20,20 @@
 12. Swagger/OpenAPI 文档（/api/openapi.json、/api/docs）
 13. 监控端点（/monitor/health、/metrics、/info）
 14. 网络连通性诊断工具箱（Ping / Traceroute / 端口探测 / DNS / 一键诊断）
+15. 群晖 NAS 用户扫描与批量改密（DSM Web API + 审计）
+
+## V1.6 更新内容
+- 新增群晖 NAS 用户管理模块（`/nas/users/`）
+  - DSM Web API 登录，支持双重验证、HTTPS、自签名证书
+  - 扫描全部本地用户，展示用户组、管理员、密码策略、上次改密、2FA
+  - 单个 / 批量改密，支持密码策略校验、CSV 导出、审计日志
+  - 改密前读取并原样回传用户属性，避免覆盖描述、邮箱、过期时间等
+  - 管理员账号二次确认，当前登录账号自动跳过
+  - DSM 会话仅保存在进程内存，密码与 SID 不落库、不写日志
+- 新增 `tools/nas_users_cli.py` 命令行工具（list / reset / dry-run / CSV）
+- 新增 `tests/test_synology_users.py`（53 个）和 `tests/test_synology_script.py`（12 个）自动化测试
+- 补齐 `requirements.txt` 完整依赖
+- Web 界面升级至 V1.6
 
 ## V1.5 更新内容
 - 深信服科技风格 UI 全面改版

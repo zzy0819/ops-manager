@@ -1,0 +1,589 @@
+{% extends 'base.html' %}
+{% block title %}群晖用户管理{% endblock %}
+{% block page_title %}群晖用户管理{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nas-conn-bar {
+        background: linear-gradient(110deg, #0a1628 0%, #0c2d6b 62%, #1677ff 100%);
+        border-radius: 10px;
+        color: #fff;
+        padding: 18px 22px;
+        margin-bottom: 16px;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 16px; flex-wrap: wrap;
+        position: relative; overflow: hidden;
+    }
+    .nas-conn-bar::after {
+        content: ''; position: absolute; right: -40px; top: -80px;
+        width: 200px; height: 200px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(0,212,255,.3), transparent 68%);
+    }
+    .nas-conn-main { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
+    .nas-conn-icon {
+        width: 44px; height: 44px; border-radius: 10px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(0,212,255,.16); color: #00d4ff; font-size: 22px;
+    }
+    .nas-conn-bar h5 { margin: 0 0 3px; font-size: 16px; font-weight: 700; }
+    .nas-conn-bar .meta { font-size: 12px; color: rgba(255,255,255,.65); }
+    .nas-conn-actions { display: flex; gap: 8px; position: relative; z-index: 1; flex-wrap: wrap; }
+
+    .nas-stat {
+        background: #fff; border: 1px solid var(--border); border-radius: 8px;
+        padding: 14px 16px; box-shadow: var(--shadow); height: 100%;
+    }
+    .nas-stat .label { font-size: 12px; color: var(--text-muted); }
+    .nas-stat .value { font-size: 24px; font-weight: 700; line-height: 1.25; }
+    .nas-stat i { font-size: 18px; }
+
+    .user-table-wrap { max-height: 62vh; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+    .user-table-wrap thead th { position: sticky; top: 0; z-index: 2; }
+    .user-table-wrap td { vertical-align: middle; }
+    .user-name { font-weight: 600; }
+    .group-badge { background: #eef2f7; color: #4e5969; margin: 1px 2px 1px 0; }
+    .policy-pill { font-size: 11px; padding: 2px 7px; border-radius: 10px; background: #f2f3f5; color: #4e5969; }
+    .batch-toolbar {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        background: #f7f9fc; border: 1px solid var(--border); border-radius: 8px;
+        padding: 10px 12px; margin-bottom: 12px;
+    }
+    .batch-toolbar .selected-count { font-size: 13px; color: var(--text-secondary); }
+    .batch-toolbar .selected-count strong { color: var(--primary); font-size: 16px; }
+    .password-rules { background: #f7f8fa; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--text-secondary); }
+    .password-rules ul { margin: 0; padding-left: 18px; }
+    .password-rules li { margin: 2px 0; }
+    .result-row-success { border-left: 3px solid var(--success); }
+    .result-row-failed { border-left: 3px solid var(--danger); }
+    .result-row-skipped { border-left: 3px solid var(--warning); }
+    .audit-table td { font-size: 12px; }
+    .admin-warning { display: none; }
+    @media (max-width: 768px) {
+        .nas-conn-bar { align-items: flex-start; }
+        .user-table-wrap { max-height: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="nas-conn-bar">
+    <div class="nas-conn-main">
+        <div class="nas-conn-icon"><i class="bi bi-hdd-network"></i></div>
+        <div>
+            <h5>{{ conn.host }}</h5>
+            <div class="meta">
+                登录账号 <strong class="text-white">{{ conn.account }}</strong>
+                · 扫描时间 {{ conn.scan_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                · {{ conn.users|length }} 个本地用户
+                {% if not conn.policy.available %}· <span class="text-warning">密码策略不可用，使用默认规则</span>{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="nas-conn-actions">
+        <form method="POST" action="{{ url_for('nas_users.refresh') }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-sm btn-info text-white" title="重新扫描全部用户">
+                <i class="bi bi-arrow-clockwise"></i> 重新扫描
+            </button>
+        </form>
+        <a href="{{ url_for('nas_users.export_users', q=q, group=group, flag=flag) }}" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-filetype-csv"></i> 导出 CSV
+        </a>
+        <form method="POST" action="{{ url_for('nas_users.disconnect') }}" class="d-inline"
+              onsubmit="return confirm('确定断开 NAS 并注销 DSM 会话吗？');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-sm btn-outline-light"><i class="bi bi-box-arrow-right"></i> 断开</button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3">
+        <div class="nas-stat">
+            <div class="d-flex justify-content-between align-items-start">
+                <div><div class="label">本地用户总数</div><div class="value">{{ stats.total }}</div></div>
+                <i class="bi bi-people text-primary"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="nas-stat">
+            <div class="d-flex justify-content-between align-items-start">
+                <div><div class="label">管理员账号</div><div class="value text-danger">{{ stats.admins }}</div></div>
+                <i class="bi bi-shield-lock text-danger"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="nas-stat">
+            <div class="d-flex justify-content-between align-items-start">
+                <div><div class="label">已启用双重验证</div><div class="value text-success">{{ stats.two_factor }}</div></div>
+                <i class="bi bi-phone text-success"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="nas-stat">
+            <div class="d-flex justify-content-between align-items-start">
+                <div><div class="label">禁止用户自行改密</div><div class="value text-warning">{{ stats.cannot_change }}</div></div>
+                <i class="bi bi-slash-circle text-warning"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span><i class="bi bi-table me-2 text-primary"></i>用户列表</span>
+        <span class="text-muted" style="font-size:12px;">共 {{ users|length }} 条{% if q or group or flag %}（已筛选）{% endif %}</span>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-2 mb-3" id="filterForm">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control form-control-sm" placeholder="搜索用户名 / 描述 / 邮箱 / 用户组" value="{{ q }}">
+            </div>
+            <div class="col-md-2">
+                <select name="group" class="form-select form-select-sm">
+                    <option value="">全部用户组</option>
+                    {% for g in groups %}
+                    <option value="{{ g }}" {% if group == g %}selected{% endif %}>{{ g }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="flag" class="form-select form-select-sm">
+                    <option value="">全部状态</option>
+                    <option value="admin" {% if flag == 'admin' %}selected{% endif %}>管理员</option>
+                    <option value="2fa" {% if flag == '2fa' %}selected{% endif %}>已启用 2FA</option>
+                    <option value="cannot_change" {% if flag == 'cannot_change' %}selected{% endif %}>禁止自行改密</option>
+                    <option value="never_expire" {% if flag == 'never_expire' %}selected{% endif %}>密码永不过期</option>
+                    <option value="guest" {% if flag == 'guest' %}selected{% endif %}>来宾账号</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i> 筛选</button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('nas_users.index') }}" class="btn btn-sm btn-outline-secondary w-100">重置</a>
+            </div>
+        </form>
+
+        {% if groups_unknown %}
+        <div class="alert alert-warning py-2" style="font-size:12.5px;">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            当前 DSM 未返回用户组信息，系统无法识别哪些账号是管理员。批量改密时会被要求按“管理员账号”二次确认。
+        </div>
+        {% endif %}
+
+        <div class="batch-toolbar">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllBtn">
+                <i class="bi bi-check2-square"></i> 全选当前结果
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSelectionBtn">清除选择</button>
+            <span class="selected-count">已选择 <strong id="selectedCount">0</strong> 个用户</span>
+            <div class="ms-auto d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-danger" id="batchResetBtn" disabled data-bs-toggle="modal" data-bs-target="#batchModal">
+                    <i class="bi bi-key"></i> 批量修改密码
+                </button>
+            </div>
+        </div>
+
+        {% if users %}
+        <div class="user-table-wrap">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:36px;"><input type="checkbox" class="form-check-input" id="selectAllCheck" title="全选"></th>
+                        <th>用户名</th>
+                        <th>用户组</th>
+                        <th>描述 / 邮箱</th>
+                        <th>密码策略</th>
+                        <th>上次改密</th>
+                        <th>双重验证</th>
+                        <th style="width:96px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for u in users %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input user-check" name="selected"
+                                   value="{{ u.name }}" form="batchForm"
+                                   data-admin="{{ '1' if u.is_admin or not u.groups_known else '0' }}">
+                        </td>
+                        <td>
+                            <span class="user-name">{{ u.name }}</span>
+                            {% if u.is_admin %}<span class="badge bg-danger ms-1">管理员</span>{% endif %}
+                            {% if u.is_guest %}<span class="badge bg-secondary ms-1">来宾</span>{% endif %}
+                            {% if u.is_builtin and not u.is_admin %}<span class="badge bg-light text-secondary ms-1">内置</span>{% endif %}
+                        </td>
+                        <td style="max-width:230px;">
+                            {% if u.groups %}
+                                {% for g in u.groups[:4] %}
+                                <span class="badge group-badge">{{ g }}</span>
+                                {% endfor %}
+                                {% if u.groups|length > 4 %}<span class="text-muted" style="font-size:11px;">+{{ u.groups|length - 4 }}</span>{% endif %}
+                            {% elif not u.groups_known %}
+                                <span class="badge bg-warning text-dark">组信息未知</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td style="max-width:260px;">
+                            {% if u.description %}<div style="font-size:12.5px;">{{ u.description }}</div>{% endif %}
+                            {% if u.email %}<div class="text-muted" style="font-size:12px;"><i class="bi bi-envelope"></i> {{ u.email }}</div>{% endif %}
+                            {% if not u.description and not u.email %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if u.passwd_never_expire %}<span class="policy-pill">永不过期</span>{% endif %}
+                            {% if u.cannot_chg_passwd %}<span class="policy-pill">禁止自行改密</span>{% endif %}
+                            {% if not u.passwd_never_expire and not u.cannot_chg_passwd %}<span class="text-muted">默认</span>{% endif %}
+                        </td>
+                        <td class="text-muted" style="font-size:12px;">{{ u.password_last_change or '未知' }}</td>
+                        <td>
+                            {% if u.two_factor is sameas true %}
+                            <span class="badge bg-success">已启用</span>
+                            {% elif u.two_factor is sameas false %}
+                            <span class="badge bg-light text-secondary">未启用</span>
+                            {% else %}
+                            <span class="text-muted">未知</span>
+                            {% endif %}
+                        </td>
+                        <td nowrap>
+                            <button type="button" class="btn btn-sm btn-outline-danger js-reset-one"
+                                    data-name="{{ u.name }}" data-admin="{{ '1' if u.is_admin or not u.groups_known else '0' }}"
+                                    title="重置该用户密码">
+                                <i class="bi bi-key"></i> 改密
+                            </button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-search"></i>
+            <div>没有符合条件的用户</div>
+            <div class="mt-2" style="font-size:12px;">调整筛选条件，或点击右上角“重新扫描”。</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if batch_result %}
+<div class="card" id="batchResult">
+    <div class="card-header">
+        <span>
+            <i class="bi bi-clipboard-check me-2 text-primary"></i>批量改密结果
+            <span class="badge bg-success ms-2">成功 {{ batch_result.counts.success }}</span>
+            <span class="badge bg-danger ms-1">失败 {{ batch_result.counts.failed }}</span>
+            <span class="badge bg-warning text-dark ms-1">跳过 {{ batch_result.counts.skipped }}</span>
+        </span>
+        <form method="POST" action="{{ url_for('nas_users.clear_result') }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i> 关闭</button>
+        </form>
+    </div>
+    <div class="card-body">
+        <div class="text-muted mb-2" style="font-size:12px;">
+            开始 {{ batch_result.started_at }} · 结束 {{ batch_result.finished_at }} · 共 {{ batch_result.total }} 个用户
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>用户</th><th>结果</th><th>说明</th></tr></thead>
+                <tbody>
+                {% for item in batch_result['items'] %}
+                <tr class="result-row-{{ item.status }}">
+                    <td class="fw-semibold">{{ item.name }}</td>
+                    <td>
+                        {% if item.status == 'success' %}<span class="badge bg-success">成功</span>
+                        {% elif item.status == 'failed' %}<span class="badge bg-danger">失败</span>
+                        {% else %}<span class="badge bg-warning text-dark">跳过</span>{% endif %}
+                    </td>
+                    <td class="text-secondary" style="font-size:12.5px;">{{ item.message }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <span><i class="bi bi-journal-text me-2 text-primary"></i>最近改密审计</span>
+        <span class="text-muted" style="font-size:12px;">仅当前 NAS · 最近 20 条 · 不记录密码</span>
+    </div>
+    <div class="card-body p-0">
+        {% if audit_rows %}
+        <div class="table-responsive">
+            <table class="table table-sm audit-table mb-0">
+                <thead><tr><th>时间</th><th>目标用户</th><th>结果</th><th>NAS 账号</th><th>来源 IP</th><th>说明</th></tr></thead>
+                <tbody>
+                {% for log in audit_rows %}
+                <tr>
+                    <td class="text-muted">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td class="fw-semibold">{{ log.target_user }}</td>
+                    <td>
+                        {% if log.result == 'success' %}<span class="badge bg-success">成功</span>
+                        {% elif log.result == 'failed' %}<span class="badge bg-danger">失败</span>
+                        {% else %}<span class="badge bg-warning text-dark">跳过</span>{% endif %}
+                    </td>
+                    <td>{{ log.nas_account }}</td>
+                    <td class="text-muted">{{ log.client_ip or '-' }}</td>
+                    <td class="text-muted">{{ log.message }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-4"><i class="bi bi-journal"></i><div>暂无改密记录</div></div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 批量改密 Modal -->
+<div class="modal fade" id="batchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('nas_users.reset_passwords') }}" id="batchForm" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-key me-2 text-danger"></i>批量修改用户密码</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning py-2" style="font-size:12.5px;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        将把选中的 <strong id="modalSelectedCount">0</strong> 个用户密码统一重置为下面的新密码。
+                        此操作立即生效，请务必通过安全渠道通知用户。
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">新密码 <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="password" name="new_password" id="newPassword" class="form-control" required
+                                   minlength="1" autocomplete="new-password">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePwd('newPassword', this)" tabindex="-1">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-primary" type="button" id="generatePasswordBtn">
+                                <i class="bi bi-shuffle"></i> 生成
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">确认新密码 <span class="text-danger">*</span></label>
+                        <input type="password" name="confirm_password" id="confirmPassword" class="form-control" required
+                               autocomplete="new-password">
+                    </div>
+
+                    <div class="password-rules mb-3">
+                        <div class="fw-semibold mb-1"><i class="bi bi-shield-check me-1"></i>群晖密码策略</div>
+                        <ul>
+                            {% if conn.policy.available %}
+                                {% if conn.policy.min_length_enable %}<li>至少 {{ conn.policy.min_length }} 个字符</li>{% endif %}
+                                {% if conn.policy.mixed_case %}<li>同时包含大写和小写字母</li>{% endif %}
+                                {% if conn.policy.included_numeric_char %}<li>包含数字</li>{% endif %}
+                                {% if conn.policy.included_special_char %}<li>包含特殊字符</li>{% endif %}
+                                {% if conn.policy.exclude_username %}<li>不能包含用户名</li>{% endif %}
+                                {% if conn.policy.history_num %}<li>不能与最近 {{ conn.policy.history_num }} 次密码重复</li>{% endif %}
+                                {% if not conn.policy.min_length_enable and not conn.policy.mixed_case and not conn.policy.included_numeric_char and not conn.policy.included_special_char %}
+                                <li>未启用强密码规则，但建议使用 12 位以上复杂密码</li>
+                                {% endif %}
+                            {% else %}
+                                <li>未能读取策略，默认要求至少 8 位，并包含大小写字母和数字</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="allow_admin" id="allowAdmin">
+                        <label class="form-check-label" for="allowAdmin">
+                            允许重置管理员 / 未识别账号
+                            <span class="text-danger" style="font-size:12px;">（高风险）</span>
+                        </label>
+                    </div>
+                    <div class="admin-warning" id="adminWarning">
+                        <label class="form-label text-danger" for="adminConfirm">输入 <code>RESET</code> 确认重置管理员/未识别账号密码</label>
+                        <input type="text" class="form-control" name="admin_confirm" id="adminConfirm"
+                               placeholder="RESET" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-danger" id="confirmResetBtn">
+                        <i class="bi bi-key"></i> 确认批量改密
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePwd(id, btn) {
+    var input = document.getElementById(id);
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+    var icon = btn.querySelector('i');
+    if (icon) icon.className = input.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+}
+
+(function () {
+    var checks = Array.prototype.slice.call(document.querySelectorAll('.user-check'));
+    var countEl = document.getElementById('selectedCount');
+    var modalCountEl = document.getElementById('modalSelectedCount');
+    var batchBtn = document.getElementById('batchResetBtn');
+    var selectAll = document.getElementById('selectAllCheck');
+    var allowAdmin = document.getElementById('allowAdmin');
+    var adminWarning = document.getElementById('adminWarning');
+    var adminConfirm = document.getElementById('adminConfirm');
+    var newPassword = document.getElementById('newPassword');
+    var confirmPassword = document.getElementById('confirmPassword');
+    var batchForm = document.getElementById('batchForm');
+
+    function selected() {
+        return checks.filter(function (item) { return item.checked; });
+    }
+
+    function syncAdminState() {
+        var hasAdmin = selected().some(function (item) { return item.dataset.admin === '1'; });
+        if (allowAdmin && allowAdmin.checked && hasAdmin) {
+            adminWarning.style.display = 'block';
+            adminConfirm.required = true;
+        } else {
+            adminWarning.style.display = 'none';
+            adminConfirm.required = false;
+            adminConfirm.value = '';
+        }
+    }
+
+    function refreshState() {
+        var items = selected();
+        var n = items.length;
+        countEl.textContent = n;
+        modalCountEl.textContent = n;
+        batchBtn.disabled = n === 0;
+        if (selectAll) {
+            selectAll.checked = checks.length > 0 && n === checks.length;
+            selectAll.indeterminate = n > 0 && n < checks.length;
+        }
+        syncAdminState();
+    }
+
+    checks.forEach(function (item) {
+        item.addEventListener('change', refreshState);
+    });
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            checks.forEach(function (item) { item.checked = selectAll.checked; });
+            refreshState();
+        });
+    }
+
+    document.getElementById('selectAllBtn').addEventListener('click', function () {
+        checks.forEach(function (item) { item.checked = true; });
+        refreshState();
+    });
+
+    document.getElementById('clearSelectionBtn').addEventListener('click', function () {
+        checks.forEach(function (item) { item.checked = false; });
+        refreshState();
+    });
+
+    document.querySelectorAll('.js-reset-one').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            checks.forEach(function (item) { item.checked = false; });
+            var target = checks.find(function (item) { return item.value === btn.dataset.name; });
+            if (target) target.checked = true;
+            refreshState();
+            // 单个管理员默认允许重置，但仍需输入 RESET
+            if (btn.dataset.admin === '1' && allowAdmin) allowAdmin.checked = true;
+            syncAdminState();
+            var modal = new bootstrap.Modal(document.getElementById('batchModal'));
+            modal.show();
+        });
+    });
+
+    if (allowAdmin) {
+        allowAdmin.addEventListener('change', function () {
+            if (!allowAdmin.checked) {
+                // 选中管理员时不允许直接取消；取消勾选会由服务端拒绝
+                syncAdminState();
+            } else {
+                syncAdminState();
+            }
+        });
+    }
+
+    if (batchForm) {
+        batchForm.addEventListener('submit', function (event) {
+            var items = selected();
+            if (items.length === 0) {
+                event.preventDefault();
+                alert('请至少选择一个用户。');
+                return;
+            }
+            if (newPassword.value !== confirmPassword.value) {
+                event.preventDefault();
+                alert('两次输入的新密码不一致。');
+                return;
+            }
+            var hasAdmin = items.some(function (item) { return item.dataset.admin === '1'; });
+            if (hasAdmin) {
+                if (!allowAdmin.checked) {
+                    event.preventDefault();
+                    alert('选中了管理员账号，请先勾选“允许重置管理员账号”。');
+                    return;
+                }
+                if (adminConfirm.value.trim() !== 'RESET') {
+                    event.preventDefault();
+                    alert('请输入 RESET 确认重置管理员密码。');
+                    return;
+                }
+            }
+            if (!confirm('确定重置 ' + items.length + ' 个用户的密码吗？此操作立即生效。')) {
+                event.preventDefault();
+            }
+        });
+    }
+
+    document.getElementById('generatePasswordBtn').addEventListener('click', function () {
+        var upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        var lower = 'abcdefghijkmnopqrstuvwxyz';
+        var digits = '23456789';
+        var special = '!@#$%^&*_-+=';
+        var all = upper + lower + digits + special;
+        var bytes = new Uint32Array(16);
+        crypto.getRandomValues(bytes);
+        var chars = [
+            upper[bytes[0] % upper.length],
+            lower[bytes[1] % lower.length],
+            digits[bytes[2] % digits.length],
+            special[bytes[3] % special.length]
+        ];
+        for (var i = 4; i < 16; i++) {
+            chars.push(all[bytes[i] % all.length]);
+        }
+        for (var j = chars.length - 1; j > 0; j--) {
+            var k = bytes[j] % (j + 1);
+            var t = chars[j]; chars[j] = chars[k]; chars[k] = t;
+        }
+        var pwd = chars.join('');
+        newPassword.value = pwd;
+        confirmPassword.value = pwd;
+        newPassword.type = 'text';
+        confirmPassword.type = 'text';
+    });
+
+    refreshState();
+})();
+</script>
+{% endblock %}

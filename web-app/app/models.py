@@ -140,3 +140,24 @@ class IPScanResult(db.Model):
 
     def __repr__(self):
         return f'<IPScan {self.subnet} {self.alive_ips}/{self.total_ips}>'
+
+
+class NasPasswordResetLog(db.Model):
+    """群晖用户密码重置审计日志。
+
+    只记录操作结果，绝不记录密码、SID 或管理员登录凭据。
+    """
+
+    __tablename__ = 'nas_password_reset_logs'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nas_host = db.Column(db.String(255), nullable=False, index=True)
+    nas_account = db.Column(db.String(128), nullable=False)
+    target_user = db.Column(db.String(128), nullable=False, index=True)
+    result = db.Column(db.String(16), nullable=False)  # success / failed / skipped
+    message = db.Column(db.String(512), nullable=True)
+    client_ip = db.Column(db.String(64), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now, index=True)
+
+    def __repr__(self):
+        return f'<NasPasswordResetLog {self.target_user} {self.result}>'

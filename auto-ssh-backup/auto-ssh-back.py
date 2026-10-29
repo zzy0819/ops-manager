@@ -11,10 +11,10 @@ Excel 格式（第一行为表头，中英文列名均可）:
     * 密码如果是纯数字，请把单元格设置为「文本」格式，否则 Excel 会吃掉前导 0。
 
 用法:
-    python h3c_batch_save.py --template                  # 生成模板
-    python h3c_batch_save.py -f devices.xlsx --check-only  # 只校验端口+账号密码，不保存
-    python h3c_batch_save.py -f devices.xlsx             # 校验通过后保存配置
-    python h3c_batch_save.py -f devices.xlsx -w 10 -t 15 -r 2
+    python auto-ssh-back.py --template                  # 生成模板
+    python auto-ssh-back.py -f devices.xlsx --check-only  # 只校验端口+账号密码，不保存
+    python auto-ssh-back.py -f devices.xlsx             # 校验通过后保存配置
+    python auto-ssh-back.py -f devices.xlsx -w 10 -t 15 -r 2
 
 处理流程（每台设备）:
     1. 参数校验   : IP/域名、端口范围、用户名密码非空、重复项

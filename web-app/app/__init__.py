@@ -5,11 +5,20 @@ from app.extensions import db
 from app.routes import register_blueprints
 
 
-def create_app():
+def create_app(config_overrides=None):
     app = Flask(__name__,
                 template_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates'))
     app.config.from_object(Config)
+    if config_overrides:
+        app.config.update(config_overrides)
     app.config['BASE_DIR'] = os.path.dirname(os.path.dirname(__file__))
+
+    # 群晖会话存储按应用配置初始化
+    from app.services.synology_service import nas_session_store
+    nas_session_store.configure(
+        ttl=app.config.get('NAS_SESSION_TTL', 1800),
+        max_sessions=app.config.get('NAS_MAX_SESSIONS', 100),
+    )
 
     db.init_app(app)
 
